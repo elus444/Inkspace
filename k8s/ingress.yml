@@ -1,0 +1,104 @@
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: inkspace-ingress
+#   annotations:
+#     nginx.ingress.kubernetes.io/rewrite-target: /
+#     nginx.ingress.kubernetes.io/use-regex: "true"
+# spec:
+#   ingressClassName: nginx
+#   rules:
+#   - host: inkspace.local    
+#     http:
+#       paths:
+#       - path: /api/auth
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: auth-service
+#             port:
+#               number: 5000
+#       - path: /api/posts
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: post-service
+#             port:
+#               number: 5001
+#       - path: /api/comments
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: comment-service
+#             port:
+#               number: 5002
+#       - path: /api/likes
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: like-service
+#             port:
+#               number: 5003
+#       - path: /
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: inkspace-frontend
+#             port:
+#               number: 80
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: inkspace-ingress
+  namespace: inkspace
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: inkspace.local
+    http:
+      paths:
+      # API routes – must be first (regex + rewrite)
+      - path: /api/auth(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 5000
+
+      - path: /api/posts(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: post-service
+            port:
+              number: 5001
+
+      - path: /api/comments(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: comment-service
+            port:
+              number: 5002
+
+      - path: /api/likes(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: like-service
+            port:
+              number: 5003
+
+      # Everything else (assets, React routes, index.html) → frontend
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: inkspace-frontend
+            port:
+              number: 80

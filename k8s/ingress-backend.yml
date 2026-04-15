@@ -1,0 +1,43 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: inkspace-ingress-backend
+  namespace: inkspace
+  annotations:
+    # REMOVED the rewrite-target annotation
+    # REMOVED the use-regex annotation (unless you really need it)
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: inkspace.local
+    http:
+      paths:
+      - path: /api/auth
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 5000
+      - path: /api/posts
+        pathType: Prefix
+        backend:
+          service:
+            name: post-service
+            port:
+              number: 5001
+      - path: /api/comments
+        pathType: Prefix
+        backend:
+          service:
+            name: comment-service
+            port:
+              number: 5002
+      - path: /api/likes
+        pathType: Prefix
+        backend:
+          service:
+            name: like-service
+            port:
+              number: 5003

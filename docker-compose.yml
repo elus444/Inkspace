@@ -1,0 +1,118 @@
+version: "3.9"
+
+services:
+  auth-mongo:
+    image: mongo:6
+    container_name: auth-mongo
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: authService
+    ports:
+      - "27017:27017"
+    volumes:
+      - auth-mongo-data:/data/db
+
+  post-mongo:
+    image: mongo:6
+    container_name: post-mongo
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: postService
+    ports:
+      - "27018:27017"
+    volumes:
+      - post-mongo-data:/data/db
+
+  comment-mongo:
+    image: mongo:6
+    container_name: comment-mongo
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: commentService
+    ports:
+      - "27019:27017"
+    volumes:
+      - comment-mongo-data:/data/db
+
+  like-mongo:
+    image: mongo:6
+    container_name: like-mongo
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: likeService
+    ports:
+      - "27020:27017"
+    volumes:
+      - like-mongo-data:/data/db
+
+  auth-service:
+    build: ./services/auth
+    container_name: auth-service
+    restart: always
+    env_file:
+      - ./services/auth/.env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - auth-mongo
+    command: npm run dev
+
+  post-service:
+    build: ./services/post
+    container_name: post-service
+    restart: always
+    env_file:
+      - ./services/post/.env
+    ports:
+      - "5001:5001"
+    depends_on:
+      - post-mongo
+      - auth-service
+    command: npm run dev
+
+  comment-service:
+    build: ./services/comment
+    container_name: comment-service
+    restart: always
+    env_file:
+      - ./services/comment/.env
+    ports:
+      - "5002:5002"
+    depends_on:
+      - comment-mongo
+      - auth-service
+      - post-service
+    command: npm run dev
+
+  like-service:
+    build: ./services/like
+    container_name: like-service
+    restart: always
+    env_file:
+      - ./services/like/.env
+    ports:
+      - "5003:5003"
+    depends_on:
+      - comment-mongo
+      - auth-service
+      - post-service
+    command: npm run dev
+
+  frontend:
+    build: ./frontend
+    container_name: inkspace-frontend
+    restart: always
+    ports:
+      - "5173:80"
+    depends_on:
+      - auth-service
+      - post-service
+      - comment-service
+      - like-service
+
+
+volumes:
+  auth-mongo-data:
+  post-mongo-data:
+  comment-mongo-data:
+  like-mongo-data:

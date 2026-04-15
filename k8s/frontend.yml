@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inkspace-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: inkspace-frontend
+  template:
+    metadata:
+      labels:
+        app: inkspace-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: shounak26/inkspace-frontend:latest
+        ports:
+        - containerPort: 80
+        resources:                              
+          requests:
+            cpu: "50m"       
+            memory: "64Mi"
+          limits:
+            cpu: "500m"    
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inkspace-frontend
+spec:
+  selector:
+    app: inkspace-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP

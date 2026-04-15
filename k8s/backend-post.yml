@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: post-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: post-service
+  template:
+    metadata:
+      labels:
+        app: post-service
+    spec:
+      containers:
+      - name: post
+        image: shounak26/inkspace-post-service:latest
+        ports:
+        - containerPort: 5001
+        envFrom:
+          - configMapRef:
+              name: app-config
+          - secretRef:
+              name: app-secrets
+        resources:                              
+          requests:
+            cpu: "50m"       
+            memory: "64Mi"
+          limits:
+            cpu: "500m"    
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: post-service
+spec:
+  selector:
+    app: post-service
+  ports:
+    - port: 5001
+      targetPort: 5001

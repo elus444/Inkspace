@@ -1,0 +1,215 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-mongo
+  template:
+    metadata:
+      labels:
+        app: auth-mongo
+    spec:
+      containers:
+      - name: mongo
+        image: mongo:6
+        args: ["--bind_ip", "0.0.0.0"]
+        # env:
+        # - name: MONGO_INITDB_ROOT_USERNAME
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: app-secrets
+        #       key: MONGO_ROOT_USERNAME
+        # - name: MONGO_INITDB_ROOT_PASSWORD
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: app-secrets
+        #       key: MONGO_ROOT_PASSWORD
+        # - name: MONGO_INITDB_DATABASE
+        #   value: authService
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: storage
+          mountPath: /data/db
+      volumes:
+      - name: storage
+        persistentVolumeClaim:
+          claimName: auth-mongo-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-mongo
+spec:
+  selector:
+    app: auth-mongo
+  ports:
+    - port: 27017
+      targetPort: 27017
+  type: ClusterIP
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: post-mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: post-mongo
+  template:
+    metadata:
+      labels:
+        app: post-mongo
+    spec:
+      containers:
+      - name: mongo
+        image: mongo:6
+        args: ["--bind_ip", "0.0.0.0"]
+        # env:
+        # - name: MONGO_INITDB_ROOT_USERNAME
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: app-secrets
+        #       key: MONGO_ROOT_USERNAME
+        # - name: MONGO_INITDB_ROOT_PASSWORD
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: app-secrets
+        #       key: MONGO_ROOT_PASSWORD
+        # - name: MONGO_INITDB_DATABASE
+        #   value: postService
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: storage
+          mountPath: /data/db
+      volumes:
+      - name: storage
+        persistentVolumeClaim:
+          claimName: post-mongo-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: post-mongo
+spec:
+  selector:
+    app: post-mongo
+  ports:
+    - port: 27017
+      targetPort: 27017
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: like-mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: like-mongo
+  template:
+    metadata:
+      labels:
+        app: like-mongo
+    spec:
+      containers:
+      - name: mongo
+        image: mongo:6
+        args: ["--bind_ip", "0.0.0.0"]
+        # env:
+        # - name: MONGO_INITDB_ROOT_USERNAME
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: app-secrets
+        #       key: MONGO_ROOT_USERNAME
+        # - name: MONGO_INITDB_ROOT_PASSWORD
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: app-secrets
+        #       key: MONGO_ROOT_PASSWORD
+        # - name: MONGO_INITDB_DATABASE
+        #   value: likeService
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: storage
+          mountPath: /data/db
+      volumes:
+      - name: storage
+        persistentVolumeClaim:
+          claimName: like-mongo-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: like-mongo
+spec:
+  selector:
+    app: like-mongo
+  ports:
+    - port: 27017
+      targetPort: 27017
+  type: ClusterIP
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: comment-mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: comment-mongo
+  template:
+    metadata:
+      labels:
+        app: comment-mongo
+    spec:
+      containers:
+      - name: mongo
+        image: mongo:6
+        args: ["--bind_ip", "0.0.0.0"]
+        # env:
+        # - name: MONGO_INITDB_ROOT_USERNAME
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: app-secrets
+        #       key: MONGO_ROOT_USERNAME
+        # - name: MONGO_INITDB_ROOT_PASSWORD
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: app-secrets
+        #       key: MONGO_ROOT_PASSWORD
+        # - name: MONGO_INITDB_DATABASE
+        #   value: commentService
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: storage
+          mountPath: /data/db
+      volumes:
+      - name: storage
+        persistentVolumeClaim:
+          claimName: comment-mongo-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: comment-mongo
+spec:
+  selector:
+    app: comment-mongo
+  ports:
+    - port: 27017
+      targetPort: 27017

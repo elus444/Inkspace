@@ -1,0 +1,30 @@
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: app-config
+# data:
+#   AUTH_MONGO_URI: "mongodb://root:inkspace@auth-mongo:27017/admin?authSource=admin&directConnection=true"
+#   POST_MONGO_URI: "mongodb://root:inkspace@post-mongo:27017/admin?authSource=admin&directConnection=true"
+#   COMMENT_MONGO_URI: "mongodb://root:inkspace@comment-mongo:27017/admin?authSource=admin&directConnection=true"
+#   LIKE_MONGO_URI: "mongodb://root:inkspace@like-mongo:27017/admin?authSource=admin&directConnection=true"
+  
+#   AUTH_SERVICE_URL: "http://auth-service:5000"
+#   POST_SERVICE_URL: "http://post-service:5001"
+#   COMMENT_SERVICE_URL: "http://comment-service:5002"
+#   LIKE_SERVICE_URL: "http://like-service:5003"
+
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  AUTH_MONGO_URI: "mongodb://auth-mongo:27017/authService"
+  POST_MONGO_URI: "mongodb://post-mongo:27017/postService"
+  COMMENT_MONGO_URI: "mongodb://comment-mongo:27017/commentService"
+  LIKE_MONGO_URI: "mongodb://like-mongo:27017/likeService"
+  
+  AUTH_SERVICE_URL: "http://auth-service:5000"
+  POST_SERVICE_URL: "http://post-service:5001"
+  COMMENT_SERVICE_URL: "http://comment-service:5002"
+  LIKE_SERVICE_URL: "http://like-service:5003"
