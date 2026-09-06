@@ -6,7 +6,6 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
-COPY .env .env
 
 FROM node:20-alpine
 
