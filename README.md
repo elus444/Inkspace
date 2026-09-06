@@ -106,7 +106,7 @@ graph TD
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/shounak26/inkspace.git](https://github.com/shounak26/inkspace.git)
+git clone https://github.com/elus444/Inkspace.git
 cd inkspace
 
 ```
