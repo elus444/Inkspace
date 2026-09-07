@@ -5,7 +5,6 @@ import auth from "../middlewares/auth.js"
 
 interface AuthRequest extends Request {
   userId?: string;
-  user:string;
 }
 export const createLike = async (req: AuthRequest, res: Response) => {
   try {

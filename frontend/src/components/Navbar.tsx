@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { motion } from 'framer-motion';
-import { FiLogIn, FiLogOut, FiPlusSquare, FiUserPlus, FiBarChart2, FiFeather } from 'react-icons/fi';
+import { FiLogIn, FiLogOut, FiPlusSquare, FiUserPlus, FiBarChart2, FiFeather, FiBookmark } from 'react-icons/fi';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -58,6 +58,15 @@ const Navbar = () => {
                   >
                     <FiBarChart2 size={16} />
                     <span>Analytics</span>
+                  </Link>
+                </motion.div>
+                <motion.div variants={navItemVariants}>
+                  <Link
+                    to="/library"
+                    className="link-underline hidden items-center gap-2 px-2 py-2 text-sm font-medium text-ink-soft transition-colors hover:text-maroon sm:flex"
+                  >
+                    <FiBookmark size={16} />
+                    <span>Library</span>
                   </Link>
                 </motion.div>
                 <motion.div variants={navItemVariants}>

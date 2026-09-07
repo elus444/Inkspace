@@ -29,7 +29,7 @@ interface AIAssistPanelProps {
  * Streams a generative AI task from the ai-service and calls `onChunk` as
  * each piece of text arrives. Uses the raw fetch streaming API rather than
  * axios, since axios (via XHR in the browser) doesn't expose an incremental
- * reader the way `response.body.getReader()` does — this is the one place
+ * reader the way `response.body.getReader()` does. This is the one place
  * in the app that needs it.
  */
 async function streamAIRequest(
@@ -200,7 +200,7 @@ const AIAssistPanel = ({ content, title, onApplyTitle }: AIAssistPanelProps) => 
         </h3>
         {provider === "stub" && (
           <span className="rounded-full bg-cream px-2.5 py-1 text-[11px] text-taupe">
-            Demo mode — no Gemini key set
+            Demo mode (no Gemini key set)
           </span>
         )}
       </div>
@@ -217,7 +217,7 @@ const AIAssistPanel = ({ content, title, onApplyTitle }: AIAssistPanelProps) => 
           Writing suggestions {loading.writing && <span className="text-maroon">&middot; thinking...</span>}
         </p>
         <pre className="min-h-[2.5rem] whitespace-pre-wrap rounded-lg bg-cream p-3 font-sans text-sm text-ink-soft">
-          {writingTips || "Start typing — suggestions appear here automatically."}
+          {writingTips || "Start typing and suggestions will appear here."}
         </pre>
       </div>
 

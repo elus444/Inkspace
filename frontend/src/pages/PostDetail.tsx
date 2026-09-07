@@ -154,12 +154,12 @@
 
 import { useState, useEffect, type FormEvent } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom'; // Added useNavigate and Link
-import { postApi, commentApi, likeApi } from '../api/axios';
+import { postApi, commentApi, likeApi, saveApi, repostApi } from '../api/axios';
 import { type Post, type Comment } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiHeart, FiMessageSquare, FiLogIn } from 'react-icons/fi'; // Added FiLogIn
-import { trackView, trackLike, trackComment, trackReadTime } from '../lib/analytics';
+import { FiHeart, FiMessageSquare, FiLogIn, FiBookmark, FiRepeat } from 'react-icons/fi'; // Added FiLogIn
+import { trackView, trackLike, trackComment, trackSave, trackRepost, trackReadTime } from '../lib/analytics';
 
 const PostDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -170,6 +170,9 @@ const PostDetail = () => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [likeCount, setLikeCount] = useState(0);
   const [hasLiked, setHasLiked] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
+  const [hasReposted, setHasReposted] = useState(false);
+  const [repostCount, setRepostCount] = useState(0);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -188,7 +191,7 @@ const PostDetail = () => {
     const startedAt = Date.now();
     let reported = false;
     const report = () => {
-      if (reported) return; // one report per visit — avoid double-counting on tab-hide + unmount
+      if (reported) return; // one report per visit; avoids double-counting on tab-hide + unmount
       reported = true;
       trackReadTime(id, Date.now() - startedAt);
     };
@@ -208,16 +211,22 @@ const PostDetail = () => {
     if (!id) return;
     const fetchData = async () => {
       try {
-        const [postRes, commentsRes, likeCountRes, hasLikedRes] = await Promise.all([
+        const [postRes, commentsRes, likeCountRes, hasLikedRes, repostCountRes, hasSavedRes, hasRepostedRes] = await Promise.all([
           postApi.get(`/${id}`),
           commentApi.get(`/post/${id}`),
           likeApi.get(`/post/${id}/count`),
-          user ? likeApi.get(`/post/${id}/liked`) : Promise.resolve({ data: { liked: false } })
+          user ? likeApi.get(`/post/${id}/liked`) : Promise.resolve({ data: { liked: false } }),
+          repostApi.get(`/post/${id}/count`),
+          user ? saveApi.get(`/post/${id}/saved`) : Promise.resolve({ data: { saved: false } }),
+          user ? repostApi.get(`/post/${id}/reposted`) : Promise.resolve({ data: { reposted: false } }),
         ]);
         setPost(postRes.data);
         setComments(commentsRes.data);
         setLikeCount(likeCountRes.data.count);
         setHasLiked(hasLikedRes.data.liked);
+        setRepostCount(repostCountRes.data.count);
+        setHasSaved(hasSavedRes.data.saved);
+        setHasReposted(hasRepostedRes.data.reposted);
       } catch (error) {
         console.error("Failed to fetch post details:", error);
       } finally {
@@ -247,6 +256,46 @@ const PostDetail = () => {
       setHasLiked(!hasLiked);
     } catch (error) {
       console.error("Failed to update like status:", error);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    if (!id) return;
+    try {
+      if (hasSaved) {
+        await saveApi.delete('/', { data: { postId: id } });
+      } else {
+        await saveApi.post('/', { postId: id });
+        trackSave(id);
+      }
+      setHasSaved(!hasSaved);
+    } catch (error) {
+      console.error("Failed to update save status:", error);
+    }
+  };
+
+  const handleRepost = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    if (!id) return;
+    try {
+      if (hasReposted) {
+        await repostApi.delete('/', { data: { postId: id } });
+        setRepostCount((prev) => prev - 1);
+      } else {
+        await repostApi.post('/', { postId: id });
+        setRepostCount((prev) => prev + 1);
+        trackRepost(id);
+      }
+      setHasReposted(!hasReposted);
+    } catch (error) {
+      console.error("Failed to update repost status:", error);
     }
   };
 
@@ -309,6 +358,31 @@ const PostDetail = () => {
           <FiMessageSquare className="h-5 w-5" />
           <span className="text-sm font-semibold">{comments.length}</span>
         </div>
+        <motion.button
+          onClick={handleRepost}
+          className="group flex items-center gap-2 transition-colors duration-300"
+          whileTap={{ scale: 1.25 }}
+          title={hasReposted ? 'Un-repost' : 'Repost'}
+        >
+          <FiRepeat
+            className={`h-5 w-5 transition-colors duration-300 ${
+              hasReposted ? 'text-maroon' : 'text-taupe group-hover:text-maroon'
+            }`}
+          />
+          <span className="text-sm font-semibold text-ink-soft">{repostCount}</span>
+        </motion.button>
+        <motion.button
+          onClick={handleSave}
+          className="group ml-auto flex items-center gap-2 transition-colors duration-300"
+          whileTap={{ scale: 1.25 }}
+          title={hasSaved ? 'Remove from Library' : 'Save to Library'}
+        >
+          <FiBookmark
+            className={`h-5 w-5 transition-colors duration-300 ${
+              hasSaved ? 'fill-maroon text-maroon' : 'text-taupe group-hover:text-maroon'
+            }`}
+          />
+        </motion.button>
       </div>
 
       <div>

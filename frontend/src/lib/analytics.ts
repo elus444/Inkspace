@@ -1,10 +1,10 @@
 import { analyticsApi } from "../api/axios";
 
 /**
- * Every tracking call is fire-and-forget from the caller's point of view —
- * a slow or failed analytics request must never block or break the page a
- * real user is reading. Errors are swallowed here (not silently ignored —
- * logged to the console) so callers don't need their own try/catch.
+ * Every tracking call is fire-and-forget from the caller's point of view.
+ * A slow or failed analytics request must never block or break the page a
+ * real user is reading. Errors are swallowed here (not silently ignored,
+ * just logged to the console) so callers don't need their own try/catch.
  */
 function fireAndForget(promise: Promise<unknown>): void {
   promise.catch((err) => console.error("Analytics tracking failed:", err));
@@ -20,6 +20,14 @@ export function trackLike(postId: string): void {
 
 export function trackComment(postId: string): void {
   fireAndForget(analyticsApi.post("/track", { type: "comment", postId }));
+}
+
+export function trackSave(postId: string): void {
+  fireAndForget(analyticsApi.post("/track", { type: "save", postId }));
+}
+
+export function trackRepost(postId: string): void {
+  fireAndForget(analyticsApi.post("/track", { type: "repost", postId }));
 }
 
 export function trackSignup(): void {

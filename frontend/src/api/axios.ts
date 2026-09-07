@@ -20,3 +20,5 @@ export const commentApi = createApiClient(import.meta.env.VITE_COMMENT_URL);
 export const likeApi = createApiClient(import.meta.env.VITE_LIKE_URL);
 export const aiApi = createApiClient(import.meta.env.VITE_AI_URL);
 export const analyticsApi = createApiClient(import.meta.env.VITE_ANALYTICS_URL);
+export const saveApi = createApiClient(import.meta.env.VITE_SAVE_URL);
+export const repostApi = createApiClient(import.meta.env.VITE_REPOST_URL);

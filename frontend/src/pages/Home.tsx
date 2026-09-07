@@ -1,31 +1,133 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { postApi } from '../api/axios';
-import { type Post } from '../types';
+import { postApi, repostApi, authApi } from '../api/axios';
+import { type Post, type PostsResponse } from '../types';
 import { motion } from 'framer-motion';
-import { FiArrowRight, FiFeather } from 'react-icons/fi';
+import { FiArrowRight, FiFeather, FiRepeat } from 'react-icons/fi';
 import { useAuth } from '../hooks/useAuth';
 
 const easeEditorial = [0.22, 1, 0.36, 1] as const;
+const PAGE_SIZE = 12;
+
+interface RepostRecord {
+  _id: string;
+  userId: string;
+  postId: string;
+  createdAt: string;
+}
+
+interface FeedItem {
+  key: string;
+  timestamp: string;
+  post: Post;
+  repostedBy?: string; // reposter's display name, if this item is a repost
+}
+
+/** Batch-resolves userIds -> display names, tolerating the endpoint being
+ *  briefly unavailable (feed still renders, just without names). */
+async function resolveNames(ids: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(ids)].filter(Boolean);
+  if (unique.length === 0) return new Map();
+  try {
+    const res = await authApi.get<{ _id: string; name: string }[]>('/users', {
+      params: { ids: unique.join(',') },
+    });
+    return new Map(res.data.map((u) => [u._id, u.name]));
+  } catch (err) {
+    console.error('Failed to resolve author names:', err);
+    return new Map();
+  }
+}
+
+function buildFeed(posts: Post[], reposts: RepostRecord[], postById: Map<string, Post>, nameById: Map<string, string>): FeedItem[] {
+  const items: FeedItem[] = [];
+  for (const post of posts) {
+    items.push({ key: `post:${post._id}`, timestamp: post.createdAt, post });
+  }
+  for (const repost of reposts) {
+    const post = postById.get(repost.postId);
+    if (!post) continue; // original post may have been deleted since
+    items.push({
+      key: `repost:${repost._id}`,
+      timestamp: repost.createdAt,
+      post,
+      repostedBy: nameById.get(repost.userId) ?? 'Someone',
+    });
+  }
+  return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
 
 const Home = () => {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [feed, setFeed] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextPage, setNextPage] = useState(2);
   const { user } = useAuth();
 
   useEffect(() => {
-    const fetchPosts = async () => {
+    const load = async () => {
       try {
-        const response = await postApi.get('/');
-        setPosts(response.data);
+        const [postsRes, repostsRes] = await Promise.all([
+          postApi.get<PostsResponse>('/', { params: { page: 1, limit: PAGE_SIZE } }),
+          repostApi.get<RepostRecord[]>('/feed', { params: { limit: PAGE_SIZE } }),
+        ]);
+
+        const posts = postsRes.data.posts;
+        const postById = new Map(posts.map((p) => [p._id, p]));
+        const missingIds = repostsRes.data.map((r) => r.postId).filter((id) => !postById.has(id));
+        if (missingIds.length > 0) {
+          const extra = await postApi.get<PostsResponse>('/', { params: { ids: missingIds.join(',') } });
+          for (const p of extra.data.posts) postById.set(p._id, p);
+        }
+
+        const nameIds = [...posts.map((p) => p.authorId), ...repostsRes.data.map((r) => r.userId)];
+        const names = await resolveNames(nameIds);
+
+        setFeed(buildFeed(posts, repostsRes.data, postById, names));
+        setHasMore(postsRes.data.hasMore || repostsRes.data.length === PAGE_SIZE);
       } catch (error) {
-        console.error('Failed to fetch posts:', error);
+        console.error('Failed to fetch home feed:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchPosts();
+    load();
   }, []);
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const oldestShown = feed.length > 0 ? feed[feed.length - 1]!.timestamp : undefined;
+      const [postsRes, repostsRes] = await Promise.all([
+        postApi.get<PostsResponse>('/', { params: { page: nextPage, limit: PAGE_SIZE } }),
+        repostApi.get<RepostRecord[]>('/feed', { params: { limit: PAGE_SIZE, before: oldestShown } }),
+      ]);
+
+      const posts = postsRes.data.posts;
+      const postById = new Map(posts.map((p) => [p._id, p]));
+      const missingIds = repostsRes.data.map((r) => r.postId).filter((id) => !postById.has(id));
+      if (missingIds.length > 0) {
+        const extra = await postApi.get<PostsResponse>('/', { params: { ids: missingIds.join(',') } });
+        for (const p of extra.data.posts) postById.set(p._id, p);
+      }
+
+      const nameIds = [...posts.map((p) => p.authorId), ...repostsRes.data.map((r) => r.userId)];
+      const names = await resolveNames(nameIds);
+
+      const newItems = buildFeed(posts, repostsRes.data, postById, names);
+      setFeed((prev) => {
+        const seen = new Set(prev.map((item) => item.key));
+        return [...prev, ...newItems.filter((item) => !seen.has(item.key))];
+      });
+      setHasMore(postsRes.data.hasMore || repostsRes.data.length === PAGE_SIZE);
+      setNextPage((p) => p + 1);
+    } catch (error) {
+      console.error('Failed to load more posts:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -74,9 +176,8 @@ const Home = () => {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-ink-soft"
         >
-          Inkspace is a small, unhurried corner of the internet for writing
-          that takes its time — essays, notes, and stories worth reading
-          slowly.
+          Inkspace is a small, unhurried corner of the internet for essays,
+          notes, and stories worth reading slowly.
         </motion.p>
 
         {!user && (
@@ -132,7 +233,7 @@ const Home = () => {
               className="h-10 w-10 rounded-full border-2 border-border-warm border-t-maroon"
             />
           </div>
-        ) : posts.length === 0 ? (
+        ) : feed.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -142,49 +243,70 @@ const Home = () => {
               Nothing's been written yet.
             </p>
             <p className="mt-2 text-sm text-taupe">
-              {user ? 'Be the first — your story starts here.' : 'Sign in to write the first one.'}
+              {user ? 'Be the first to share something.' : 'Sign in to write the first one.'}
             </p>
           </motion.div>
         ) : (
-          <motion.div
-            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            {posts.map((post) => (
-              <motion.div
-                key={post._id}
-                variants={itemVariants}
-                whileHover={{ y: -6 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-              >
-                <Link to={`/post/${post._id}`} className="group block h-full">
-                  <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-border-warm bg-cream p-7 shadow-warm-sm transition-shadow duration-300 group-hover:shadow-warm">
-                    <span className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-maroon transition-transform duration-300 group-hover:scale-x-100" />
-                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-taupe">
-                      {new Date(post.createdAt).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
+          <>
+            <motion.div
+              className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {feed.map((item) => (
+                <motion.div
+                  key={item.key}
+                  variants={itemVariants}
+                  whileHover={{ y: -6 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+                >
+                  {item.repostedBy && (
+                    <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-taupe">
+                      <FiRepeat size={12} /> Reposted by {item.repostedBy}
                     </p>
-                    <h3 className="font-display text-xl italic text-ink transition-colors duration-300 group-hover:text-maroon">
-                      {post.title}
-                    </h3>
-                    <p className="mt-3 flex-1 text-sm leading-relaxed text-ink-soft">
-                      {post.content.slice(0, 120)}
-                      {post.content.length > 120 ? '...' : ''}
-                    </p>
-                    <div className="mt-5 flex items-center text-sm font-medium text-maroon">
-                      Read story
-                      <FiArrowRight className="ml-2 transition-transform duration-300 group-hover:translate-x-1" />
+                  )}
+                  <Link to={`/post/${item.post._id}`} className="group block h-full">
+                    <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-border-warm bg-cream p-7 shadow-warm-sm transition-shadow duration-300 group-hover:shadow-warm">
+                      <span className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-maroon transition-transform duration-300 group-hover:scale-x-100" />
+                      <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-taupe">
+                        {new Date(item.post.createdAt).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </p>
+                      <h3 className="font-display text-xl italic text-ink transition-colors duration-300 group-hover:text-maroon">
+                        {item.post.title}
+                      </h3>
+                      <p className="mt-3 flex-1 text-sm leading-relaxed text-ink-soft">
+                        {item.post.content.slice(0, 120)}
+                        {item.post.content.length > 120 ? '...' : ''}
+                      </p>
+                      <div className="mt-5 flex items-center text-sm font-medium text-maroon">
+                        Read story
+                        <FiArrowRight className="ml-2 transition-transform duration-300 group-hover:translate-x-1" />
+                      </div>
                     </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </motion.div>
+                  </Link>
+                </motion.div>
+              ))}
+            </motion.div>
+
+            {hasMore && (
+              <div className="mt-10 flex justify-center">
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="rounded-full border border-border-warm bg-parchment px-6 py-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-maroon/40 hover:text-maroon disabled:opacity-50"
+                >
+                  {loadingMore ? 'Loading...' : 'Load more'}
+                </motion.button>
+              </div>
+            )}
+          </>
         )}
       </section>
     </div>

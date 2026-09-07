@@ -122,12 +122,14 @@ const GENERIC_EVENT_MAP = {
   comment: "PostCommented",
   signup: "UserSignup",
   login: "UserLogin",
+  save: "PostSaved",
+  repost: "PostReposted",
 } as const;
 
 export const trackGeneric = async (req: Request, res: Response) => {
   const type = req.body?.type as keyof typeof GENERIC_EVENT_MAP | undefined;
   if (!type || !(type in GENERIC_EVENT_MAP)) {
-    return res.status(400).json({ message: "type must be one of comment, signup, login" });
+    return res.status(400).json({ message: "type must be one of comment, signup, login, save, repost" });
   }
 
   try {

@@ -3,6 +3,8 @@ import mongoose, { Schema, Document } from "mongoose";
 export type AnalyticsEventType =
   | "PostViewed"
   | "PostLiked"
+  | "PostSaved"
+  | "PostReposted"
   | "PostCommented"
   | "UserSignup"
   | "UserLogin";
@@ -24,7 +26,7 @@ const analyticsEventSchema = new Schema<IAnalyticsEvent>(
     type: {
       type: String,
       required: true,
-      enum: ["PostViewed", "PostLiked", "PostCommented", "UserSignup", "UserLogin"],
+      enum: ["PostViewed", "PostLiked", "PostSaved", "PostReposted", "PostCommented", "UserSignup", "UserLogin"],
     },
     postId: { type: String, index: true },
     userId: { type: String },

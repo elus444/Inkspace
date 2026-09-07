@@ -1,21 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { io, type Socket } from 'socket.io-client';
 import { postApi, analyticsApi } from '../api/axios';
+import { type Post, type PostsResponse } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { FiEye, FiHeart, FiMessageSquare, FiTrendingUp } from 'react-icons/fi';
-
-// The shared `Post` type in ../types is out of sync with the actual backend
-// schema (it has `author`, the API returns `authorId`) — defining the real
-// shape locally here rather than trusting or "fixing" a type used elsewhere
-// for unrelated pages.
-interface PostRecord {
-  _id: string;
-  title: string;
-  authorId: string;
-  createdAt: string;
-}
 
 interface PostMetric {
   postId: string;
@@ -62,7 +52,7 @@ function socketOrigin(baseURL: string | undefined): string {
 }
 
 function formatMs(ms: number): string {
-  if (ms <= 0) return '—';
+  if (ms <= 0) return 'N/A';
   const seconds = Math.round(ms / 1000);
   if (seconds < 60) return `${seconds}s`;
   return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
@@ -87,29 +77,30 @@ const StatCard = ({ icon, label, value }: { icon: React.ReactNode; label: string
 const Analytics = () => {
   const { user } = useAuth();
 
-  const [posts, setPosts] = useState<PostRecord[]>([]);
+  const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [global, setGlobal] = useState<GlobalDashboard | null>(null);
   const [postMetrics, setPostMetrics] = useState<PostMetric[]>([]);
   const [authorStats, setAuthorStats] = useState<AuthorStats | null>(null);
   const [trending, setTrending] = useState<TrendingEntry[]>([]);
+  const [trendingTitleById, setTrendingTitleById] = useState<Map<string, string>>(new Map());
   const [trendingPeriod, setTrendingPeriod] = useState<Period>('7d');
   const [selectedPostId, setSelectedPostId] = useState<string>('');
   const [postDashboard, setPostDashboard] = useState<PostDashboard | null>(null);
 
-  const myPosts = useMemo(
-    () => (user ? posts.filter((p) => p.authorId === user.id) : []),
-    [posts, user]
-  );
-  const myPostIds = useMemo(() => myPosts.map((p) => p._id), [myPosts]);
-  const postTitleById = useMemo(() => new Map(posts.map((p) => [p._id, p.title])), [posts]);
+  const myPostIds = myPosts.map((p) => p._id);
 
-  // All posts, once — used both for "my posts" filtering and to label
-  // trending results with real titles.
+  // Only this user's posts, fetched server-side via ?authorId= rather than
+  // downloading every post on the site and filtering client-side.
   useEffect(() => {
-    postApi.get<PostRecord[]>('/').then((res) => setPosts(res.data)).catch((err) => {
-      console.error('Failed to load posts for analytics:', err);
-    });
-  }, []);
+    if (!user) {
+      setMyPosts([]);
+      return;
+    }
+    postApi
+      .get<PostsResponse>('/', { params: { authorId: user.id } })
+      .then((res) => setMyPosts(res.data.posts))
+      .catch((err) => console.error('Failed to load your posts:', err));
+  }, [user]);
 
   useEffect(() => {
     analyticsApi.get<GlobalDashboard>('/dashboard').then((res) => setGlobal(res.data)).catch((err) => {
@@ -132,12 +123,25 @@ const Analytics = () => {
       .get<AuthorStats>('/author-stats', { params: { postIds } })
       .then((res) => setAuthorStats(res.data))
       .catch((err) => console.error('Failed to load author stats:', err));
-  }, [myPostIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myPosts]);
 
+  // Trending references posts by ANY author, so its titles are resolved
+  // independently of myPosts -- fetch exactly the ids trending returns,
+  // never the whole post collection.
   useEffect(() => {
     analyticsApi
       .get<TrendingEntry[]>('/trending', { params: { period: trendingPeriod } })
-      .then((res) => setTrending(res.data))
+      .then(async (res) => {
+        setTrending(res.data);
+        const ids = res.data.map((t) => t.postId);
+        if (ids.length === 0) {
+          setTrendingTitleById(new Map());
+          return;
+        }
+        const postsRes = await postApi.get<PostsResponse>('/', { params: { ids: ids.join(',') } });
+        setTrendingTitleById(new Map(postsRes.data.posts.map((p) => [p._id, p.title])));
+      })
       .catch((err) => console.error('Failed to load trending posts:', err));
   }, [trendingPeriod]);
 
@@ -145,7 +149,8 @@ const Analytics = () => {
     if (myPostIds.length > 0 && !selectedPostId) {
       setSelectedPostId(myPostIds[0] ?? '');
     }
-  }, [myPostIds, selectedPostId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myPosts, selectedPostId]);
 
   useEffect(() => {
     if (!selectedPostId) return;
@@ -190,9 +195,9 @@ const Analytics = () => {
 
       {/* Live counters */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard icon={<FiEye />} label="Views today" value={global?.todayViews ?? '—'} />
-        <StatCard icon={<FiHeart />} label="Likes today" value={global?.todayLikes ?? '—'} />
-        <StatCard icon={<FiMessageSquare />} label="Comments today" value={global?.todayComments ?? '—'} />
+        <StatCard icon={<FiEye />} label="Views today" value={global?.todayViews ?? '...'} />
+        <StatCard icon={<FiHeart />} label="Likes today" value={global?.todayLikes ?? '...'} />
+        <StatCard icon={<FiMessageSquare />} label="Comments today" value={global?.todayComments ?? '...'} />
       </div>
 
       {/* Author stats */}
@@ -331,7 +336,7 @@ const Analytics = () => {
               <li key={entry.postId} className="flex items-center justify-between text-sm">
                 <span className="text-ink-soft">
                   <span className="mr-2 text-taupe">#{i + 1}</span>
-                  {postTitleById.get(entry.postId) ?? entry.postId}
+                  {trendingTitleById.get(entry.postId) ?? entry.postId}
                 </span>
                 <span className="text-taupe">
                   {entry.views} views &middot; {entry.likes} likes &middot; {entry.comments} comments

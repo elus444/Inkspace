@@ -19,4 +19,9 @@ const postSchema: Schema = new Schema<IPost>(
   { timestamps: true }
 );
 
+// Backs the home feed (newest-first, paginated) and the "my posts" /
+// author-scoped queries added for the Analytics/Library pages.
+postSchema.index({ createdAt: -1 });
+postSchema.index({ authorId: 1, createdAt: -1 });
+
 export default mongoose.model<IPost>("Post", postSchema);

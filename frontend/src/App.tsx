@@ -1,14 +1,22 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import CreatePost from './pages/CreatePost';
-import PostDetail from './pages/PostDetail';
-import Analytics from './pages/Analytics';
 import ProtectedRoute from './components/ProtectedRoute';
+
+// Route-level code splitting: each page only downloads when actually
+// visited. Analytics (recharts + socket.io-client) and CreatePost (the AI
+// Assist panel) are the heaviest by far, and previously shipped in the
+// main bundle on every single page load regardless of which route a
+// visitor landed on.
+const Home = lazy(() => import('./pages/Home'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const CreatePost = lazy(() => import('./pages/CreatePost'));
+const PostDetail = lazy(() => import('./pages/PostDetail'));
+const Analytics = lazy(() => import('./pages/Analytics'));
+const Library = lazy(() => import('./pages/Library'));
 
 const pageTransition = {
   initial: { opacity: 0, y: 12 },
@@ -17,23 +25,36 @@ const pageTransition = {
   transition: { duration: 0.45, ease: [0.65, 0, 0.35, 1] as const },
 };
 
+const RouteFallback = () => (
+  <div className="flex h-64 items-center justify-center">
+    <motion.div
+      animate={{ rotate: 360 }}
+      transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
+      className="h-10 w-10 rounded-full border-2 border-border-warm border-t-maroon"
+    />
+  </div>
+);
+
 const AnimatedRoutes = () => {
   const location = useLocation();
   return (
     <AnimatePresence mode="wait">
       <motion.div key={location.pathname} {...pageTransition}>
-        <Routes location={location}>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/post/:id" element={<PostDetail />} />
+        <Suspense fallback={<RouteFallback />}>
+          <Routes location={location}>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/post/:id" element={<PostDetail />} />
 
-          {/* Protected Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/create-post" element={<CreatePost />} />
-            <Route path="/analytics" element={<Analytics />} />
-          </Route>
-        </Routes>
+            {/* Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/create-post" element={<CreatePost />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/library" element={<Library />} />
+            </Route>
+          </Routes>
+        </Suspense>
       </motion.div>
     </AnimatePresence>
   );
