@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { motion } from 'framer-motion';
-import { FiLogIn, FiLogOut, FiPlusSquare, FiUserPlus, FiBarChart2 } from 'react-icons/fi';
+import { FiLogIn, FiLogOut, FiPlusSquare, FiUserPlus, FiBarChart2, FiFeather } from 'react-icons/fi';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -13,64 +13,86 @@ const Navbar = () => {
   };
 
   const navItemVariants = {
-    hidden: { y: -20, opacity: 0 },
-    visible: { y: 0, opacity: 1, transition: { duration: 0.3 } },
+    hidden: { y: -16, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const } },
   };
 
   return (
-    <nav className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-50">
+    <nav className="sticky top-0 z-50 border-b border-border-warm/70 bg-cream/85 backdrop-blur-md">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <Link to="/" className="text-2xl font-bold text-indigo-400 hover:text-indigo-300 transition-all duration-300 hover:drop-shadow-[0_0_8px_rgba(129,140,248,0.5)]">
-            Inkspace
+        <div className="flex h-[4.5rem] items-center justify-between py-3">
+          <Link to="/" className="group flex items-center gap-2">
+            <motion.span
+              whileHover={{ rotate: -12, scale: 1.08 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+              className="text-maroon"
+            >
+              <FiFeather size={22} />
+            </motion.span>
+            <span className="font-display text-2xl italic tracking-tight text-ink transition-colors group-hover:text-maroon">
+              Inkspace
+            </span>
           </Link>
+
           <motion.div
-            className="flex items-center space-x-4"
+            className="flex items-center gap-2 sm:gap-3"
             initial="hidden"
             animate="visible"
-            variants={{
-              visible: { transition: { staggerChildren: 0.1, delayChildren: 0.2 } },
-            }}
+            variants={{ visible: { transition: { staggerChildren: 0.08, delayChildren: 0.15 } } }}
           >
             {user ? (
               <>
                 <motion.div variants={navItemVariants}>
-                  <Link to="/create-post" className="flex items-center space-x-2 text-slate-300 hover:text-indigo-400 transition-colors">
-                    <FiPlusSquare />
+                  <Link
+                    to="/create-post"
+                    className="link-underline hidden items-center gap-2 px-2 py-2 text-sm font-medium text-ink-soft transition-colors hover:text-maroon sm:flex"
+                  >
+                    <FiPlusSquare size={16} />
                     <span>Create Post</span>
                   </Link>
                 </motion.div>
                 <motion.div variants={navItemVariants}>
-                  <Link to="/analytics" className="flex items-center space-x-2 text-slate-300 hover:text-indigo-400 transition-colors">
-                    <FiBarChart2 />
+                  <Link
+                    to="/analytics"
+                    className="link-underline hidden items-center gap-2 px-2 py-2 text-sm font-medium text-ink-soft transition-colors hover:text-maroon sm:flex"
+                  >
+                    <FiBarChart2 size={16} />
                     <span>Analytics</span>
                   </Link>
                 </motion.div>
                 <motion.div variants={navItemVariants}>
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={handleLogout}
-                    className="flex items-center space-x-2 bg-slate-800 text-slate-300 px-4 py-2 rounded-md hover:bg-red-500 hover:text-white transition-all duration-300 transform hover:scale-105"
+                    className="flex items-center gap-2 rounded-full border border-border-warm bg-parchment px-4 py-2 text-sm font-medium text-ink-soft transition-colors hover:border-maroon/40 hover:bg-maroon hover:text-cream"
                   >
-                    <FiLogOut />
+                    <FiLogOut size={15} />
                     <span>Logout</span>
-                  </button>
+                  </motion.button>
                 </motion.div>
               </>
             ) : (
               <>
                 <motion.div variants={navItemVariants}>
-                  <Link to="/login" className="flex items-center space-x-2 text-slate-300 hover:text-indigo-400 transition-colors">
-                     <FiLogIn />
-                     <span>Login</span>
+                  <Link
+                    to="/login"
+                    className="link-underline flex items-center gap-2 px-2 py-2 text-sm font-medium text-ink-soft transition-colors hover:text-maroon"
+                  >
+                    <FiLogIn size={16} />
+                    <span>Login</span>
                   </Link>
                 </motion.div>
                 <motion.div variants={navItemVariants}>
-                  <Link
-                    to="/register"
-                    className="flex items-center space-x-2 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-500 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-indigo-600/30"
-                  >
-                    <FiUserPlus />
-                    <span>Register</span>
+                  <Link to="/register">
+                    <motion.span
+                      whileHover={{ scale: 1.04, boxShadow: '0 10px 30px -12px rgba(122,46,61,0.55)' }}
+                      whileTap={{ scale: 0.97 }}
+                      className="flex items-center gap-2 rounded-full bg-maroon px-4 py-2 text-sm font-medium text-cream shadow-warm-sm transition-colors"
+                    >
+                      <FiUserPlus size={15} />
+                      <span>Register</span>
+                    </motion.span>
                   </Link>
                 </motion.div>
               </>

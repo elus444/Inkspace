@@ -79,19 +79,19 @@ function CopyButton({ text }: { text: string }) {
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
       }}
-      className="text-slate-400 hover:text-slate-200 transition-colors"
+      className="text-taupe hover:text-maroon transition-colors"
       title="Copy to clipboard"
     >
-      {copied ? <FiCheck className="text-green-400" /> : <FiCopy />}
+      {copied ? <FiCheck className="text-green-600" /> : <FiCopy />}
     </button>
   );
 }
 
 const TONE_COLORS: Record<ToneResult["tone"], string> = {
-  professional: "text-blue-400 bg-blue-500/10",
-  casual: "text-amber-400 bg-amber-500/10",
-  academic: "text-purple-400 bg-purple-500/10",
-  humorous: "text-pink-400 bg-pink-500/10",
+  professional: "text-maroon-dark bg-maroon/10",
+  casual: "text-amber-700 bg-amber-500/10",
+  academic: "text-ink-soft bg-taupe/15",
+  humorous: "text-rose-700 bg-rose-500/10",
 };
 
 const AIAssistPanel = ({ content, title, onApplyTitle }: AIAssistPanelProps) => {
@@ -192,43 +192,43 @@ const AIAssistPanel = ({ content, title, onApplyTitle }: AIAssistPanelProps) => 
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-slate-800 border border-slate-700 rounded-lg p-5 space-y-5"
+      className="space-y-5 rounded-2xl border border-border-warm bg-parchment/60 p-6"
     >
       <div className="flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-slate-100 font-semibold">
-          <FiZap className="text-indigo-400" /> AI Assist
+        <h3 className="flex items-center gap-2 font-display text-lg italic text-ink">
+          <FiZap className="text-maroon" size={16} /> AI Assist
         </h3>
         {provider === "stub" && (
-          <span className="text-xs text-slate-500 bg-slate-700/50 px-2 py-1 rounded-full">
-            Demo suggestions — connect a Gemini API key for live AI
+          <span className="rounded-full bg-cream px-2.5 py-1 text-[11px] text-taupe">
+            Demo mode — no Gemini key set
           </span>
         )}
       </div>
 
       {error && (
-        <div className="bg-red-500/10 text-red-400 text-sm p-2 rounded-lg flex items-center gap-2">
+        <div className="flex items-center gap-2 rounded-lg bg-maroon/10 p-2 text-sm text-maroon-dark">
           <FiAlertTriangle /> <span>{error}</span>
         </div>
       )}
 
       {/* Live writing suggestions */}
       <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500 mb-1">
-          Writing suggestions {loading.writing && <span className="text-indigo-400">· thinking…</span>}
+        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-taupe">
+          Writing suggestions {loading.writing && <span className="text-maroon">&middot; thinking...</span>}
         </p>
-        <pre className="whitespace-pre-wrap font-sans text-sm text-slate-300 bg-slate-900/50 rounded-lg p-3 min-h-[2.5rem]">
+        <pre className="min-h-[2.5rem] whitespace-pre-wrap rounded-lg bg-cream p-3 font-sans text-sm text-ink-soft">
           {writingTips || "Start typing — suggestions appear here automatically."}
         </pre>
       </div>
 
       {/* Readability */}
       {readability && (
-        <div className="text-sm text-slate-300 bg-slate-900/50 rounded-lg p-3">
-          <div className="flex items-center gap-3 mb-1">
-            <span className="font-semibold text-slate-100">Readability: {readability.fleschScore}/100</span>
-            <span className="text-slate-500">Grade level ~{readability.gradeLevel}</span>
+        <div className="rounded-lg bg-cream p-3 text-sm text-ink-soft">
+          <div className="mb-1 flex items-center gap-3">
+            <span className="font-semibold text-ink">Readability: {readability.fleschScore}/100</span>
+            <span className="text-taupe">Grade level ~{readability.gradeLevel}</span>
           </div>
-          <ul className="list-disc list-inside text-slate-400 space-y-0.5">
+          <ul className="list-inside list-disc space-y-0.5 text-ink-soft/90">
             {readability.tips.map((tip, i) => (
               <li key={i}>{tip}</li>
             ))}
@@ -242,53 +242,53 @@ const AIAssistPanel = ({ content, title, onApplyTitle }: AIAssistPanelProps) => 
           type="button"
           disabled={disabled || loading.title}
           onClick={handleSuggestTitle}
-          className="text-sm bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-100 rounded-lg py-2 transition-colors"
+          className="rounded-full border border-border-warm bg-cream py-2 text-sm text-ink-soft transition-colors hover:border-maroon/40 hover:text-maroon disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {loading.title ? "Generating…" : "Suggest Title"}
+          {loading.title ? "Generating..." : "Suggest Title"}
         </button>
         <button
           type="button"
           disabled={disabled || loading.description}
           onClick={handleSuggestDescription}
-          className="text-sm bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-100 rounded-lg py-2 transition-colors"
+          className="rounded-full border border-border-warm bg-cream py-2 text-sm text-ink-soft transition-colors hover:border-maroon/40 hover:text-maroon disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {loading.description ? "Generating…" : "SEO Description"}
+          {loading.description ? "Generating..." : "SEO Description"}
         </button>
         <button
           type="button"
           disabled={disabled || loading.twitter}
           onClick={handleSuggestTwitter}
-          className="text-sm bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-100 rounded-lg py-2 transition-colors"
+          className="rounded-full border border-border-warm bg-cream py-2 text-sm text-ink-soft transition-colors hover:border-maroon/40 hover:text-maroon disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {loading.twitter ? "Generating…" : "Twitter Thread"}
+          {loading.twitter ? "Generating..." : "Twitter Thread"}
         </button>
         <button
           type="button"
           disabled={disabled || loading.tone}
           onClick={handleAnalyzeTone}
-          className="text-sm bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-100 rounded-lg py-2 transition-colors"
+          className="rounded-full border border-border-warm bg-cream py-2 text-sm text-ink-soft transition-colors hover:border-maroon/40 hover:text-maroon disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {loading.tone ? "Analyzing…" : "Analyze Tone"}
+          {loading.tone ? "Analyzing..." : "Analyze Tone"}
         </button>
       </div>
 
       {tone && (
-        <div className={`text-sm rounded-lg px-3 py-2 inline-flex items-center gap-2 ${TONE_COLORS[tone.tone]}`}>
+        <div className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm ${TONE_COLORS[tone.tone]}`}>
           <span className="font-semibold capitalize">{tone.tone}</span>
           <span className="opacity-70">{Math.round(tone.confidence * 100)}% confidence</span>
         </div>
       )}
 
       {titleSuggestion && (
-        <div className="bg-slate-900/50 rounded-lg p-3">
+        <div className="rounded-lg bg-cream p-3">
           <div className="flex items-start justify-between gap-2">
-            <p className="text-sm text-slate-200">{titleSuggestion}</p>
-            <div className="flex items-center gap-2 shrink-0">
+            <p className="font-display text-base italic text-ink">{titleSuggestion}</p>
+            <div className="flex shrink-0 items-center gap-2">
               <CopyButton text={titleSuggestion} />
               <button
                 type="button"
                 onClick={() => onApplyTitle(titleSuggestion)}
-                className="text-xs text-indigo-400 hover:text-indigo-300 font-medium"
+                className="text-xs font-medium text-maroon hover:text-maroon-dark"
               >
                 Use
               </button>
@@ -298,15 +298,15 @@ const AIAssistPanel = ({ content, title, onApplyTitle }: AIAssistPanelProps) => 
       )}
 
       {descriptionSuggestion && (
-        <div className="bg-slate-900/50 rounded-lg p-3 flex items-start justify-between gap-2">
-          <p className="text-sm text-slate-200">{descriptionSuggestion}</p>
+        <div className="flex items-start justify-between gap-2 rounded-lg bg-cream p-3">
+          <p className="text-sm text-ink-soft">{descriptionSuggestion}</p>
           <CopyButton text={descriptionSuggestion} />
         </div>
       )}
 
       {twitterThread && (
-        <div className="bg-slate-900/50 rounded-lg p-3 flex items-start justify-between gap-2">
-          <pre className="whitespace-pre-wrap font-sans text-sm text-slate-200">{twitterThread}</pre>
+        <div className="flex items-start justify-between gap-2 rounded-lg bg-cream p-3">
+          <pre className="whitespace-pre-wrap font-sans text-sm text-ink-soft">{twitterThread}</pre>
           <CopyButton text={twitterThread} />
         </div>
       )}

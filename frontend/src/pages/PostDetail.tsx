@@ -263,107 +263,115 @@ const PostDetail = () => {
     }
   };
 
+  const easeEditorial = [0.22, 1, 0.36, 1] as const;
+
   if (loading) return (
-    <div className="flex justify-center items-center h-64">
-      <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-400"></div>
+    <div className="flex h-64 items-center justify-center">
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
+        className="h-10 w-10 rounded-full border-2 border-border-warm border-t-maroon"
+      />
     </div>
   );
-  if (!post) return <div className="text-center mt-10 text-red-400">Post not found.</div>;
+  if (!post) return <div className="mt-10 text-center font-display text-xl italic text-maroon-dark">Post not found.</div>;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="bg-slate-800 p-6 sm:p-8 rounded-lg shadow-2xl max-w-4xl mx-auto my-10 border border-slate-700"
+    <motion.article
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.55, ease: easeEditorial }}
+      className="mx-auto my-6 max-w-3xl rounded-2xl border border-border-warm bg-cream p-8 shadow-warm-sm sm:p-12"
     >
-      <h1 className="text-4xl sm:text-5xl font-extrabold mb-4 text-slate-100 tracking-tight">{post.title}</h1>
-      <p className="text-slate-400 mb-6">Published on {new Date(post.createdAt).toLocaleDateString()}</p>
+      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-taupe">
+        {new Date(post.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+      </p>
+      <h1 className="mb-8 font-display text-4xl italic leading-tight text-ink sm:text-5xl">{post.title}</h1>
 
-      <div className="prose prose-invert lg:prose-xl max-w-none mb-8 text-slate-300 prose-headings:text-slate-100 prose-a:text-indigo-400 hover:prose-a:text-indigo-300">
+      <div className="prose prose-lg max-w-none whitespace-pre-wrap text-[17px] leading-relaxed text-ink-soft">
         {post.content}
       </div>
 
-      <div className="flex items-center space-x-6 border-t border-b border-slate-700 py-4 mb-8">
+      <div className="my-8 flex items-center gap-6 border-y border-border-warm py-4">
         <motion.button
           onClick={handleLike}
-          // Removed disabled={!user} so clicking triggers the redirect logic in handleLike
-          className={`flex items-center space-x-2 transition-colors duration-300 group ${!user ? 'cursor-pointer' : ''}`}
-          whileTap={{ scale: 1.2 }}
+          className="group flex items-center gap-2 transition-colors duration-300"
+          whileTap={{ scale: 1.25 }}
         >
-          <FiHeart className={`w-6 h-6 transition-colors duration-300 ${hasLiked ? 'text-red-500 fill-current' : 'text-slate-300 group-hover:text-red-400'}`} />
-          <span className="font-semibold text-lg text-slate-300">{likeCount}</span>
+          <FiHeart
+            className={`h-5 w-5 transition-colors duration-300 ${
+              hasLiked ? 'fill-maroon text-maroon' : 'text-taupe group-hover:text-maroon'
+            }`}
+          />
+          <span className="text-sm font-semibold text-ink-soft">{likeCount}</span>
         </motion.button>
-        <div className="flex items-center space-x-2 text-slate-300">
-           <FiMessageSquare className="w-6 h-6"/>
-           <span className="font-semibold text-lg">{comments.length}</span>
+        <div className="flex items-center gap-2 text-ink-soft">
+          <FiMessageSquare className="h-5 w-5" />
+          <span className="text-sm font-semibold">{comments.length}</span>
         </div>
       </div>
 
       <div>
-        <h3 className="text-2xl font-bold mb-4 text-slate-100">Comments</h3>
-        
-        {/* CONDITIONAL RENDERING FOR COMMENT FORM OR LOGIN PROMPT */}
+        <h3 className="mb-4 font-display text-xl italic text-ink">Comments</h3>
+
         {user ? (
-          <form onSubmit={handleCommentSubmit} className="mb-6">
+          <form onSubmit={handleCommentSubmit} className="mb-8">
             <textarea
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              className="w-full p-3 border rounded-lg bg-slate-700 border-slate-600 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow"
+              className="w-full rounded-xl border border-border-warm bg-parchment/40 p-3 text-sm text-ink placeholder:text-taupe/70 focus:border-maroon focus:outline-none focus:ring-0"
               placeholder="Add your comment..."
               rows={3}
             />
             <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                type="submit"
-                className="mt-2 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit"
+              className="mt-3 rounded-full bg-maroon px-6 py-2 text-sm font-medium text-cream shadow-warm-sm transition-colors"
             >
-              Post Comment
+              Post comment
             </motion.button>
           </form>
         ) : (
-          // The Login Message Prompt
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-8 p-6 bg-slate-700/30 border border-slate-600 rounded-lg text-center backdrop-blur-sm"
+            className="mb-8 rounded-xl border border-border-warm bg-parchment/50 p-6 text-center"
           >
-            <p className="text-slate-300 text-lg mb-4">
-              Log in to like this post and join the conversation.
-            </p>
-            <Link 
+            <p className="mb-4 text-ink-soft">Log in to like this post and join the conversation.</p>
+            <Link
               to="/login"
-              className="inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg transition-all duration-300 shadow-lg shadow-indigo-600/30"
+              className="inline-flex items-center gap-2 rounded-full bg-maroon px-6 py-2 text-sm font-medium text-cream shadow-warm-sm transition-colors"
             >
-              <FiLogIn />
-              <span>Login to Interact</span>
+              <FiLogIn size={15} />
+              <span>Login to interact</span>
             </Link>
           </motion.div>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <AnimatePresence>
-            {comments.map(comment => (
+            {comments.map((comment) => (
               <motion.div
                 key={comment._id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="bg-slate-700/50 p-4 rounded-lg border border-slate-700/50"
+                className="rounded-xl border border-border-warm/70 bg-parchment/40 p-4"
               >
-                <p className="text-slate-300">{comment.content}</p>
-                <p className="text-sm text-slate-500 mt-2">
+                <p className="text-sm text-ink-soft">{comment.content}</p>
+                <p className="mt-2 text-xs text-taupe">
                   Commented on {new Date(comment.createdAt).toLocaleString()}
                 </p>
               </motion.div>
             ))}
           </AnimatePresence>
           {comments.length === 0 && !user && (
-            <p className="text-slate-500 italic">No comments yet. Be the first to comment after logging in!</p>
+            <p className="italic text-taupe">No comments yet. Be the first to comment after logging in!</p>
           )}
         </div>
       </div>
-    </motion.div>
+    </motion.article>
   );
 };
 
