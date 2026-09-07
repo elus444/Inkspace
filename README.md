@@ -13,21 +13,27 @@ A scalable, full-stack blogging platform built using a **Microservices Architect
 
 **[inkspace-frontend.onrender.com](https://inkspace-frontend.onrender.com)**
 
-Deployed free on Render (5 backend microservices + static frontend) with MongoDB
+Deployed free on Render (6 backend microservices + static frontend) with MongoDB
 Atlas — one database per service, per the architecture below. See
 [DEPLOY.md](./DEPLOY.md) for the full deployment guide.
 
 > Free-tier services spin down after ~15 min idle; a keep-alive workflow
 > ([`.github/workflows/keep-alive.yml`](./.github/workflows/keep-alive.yml))
-> pings all 6 services every 10 minutes so cold starts shouldn't come up in
+> pings all 7 services every 10 minutes so cold starts shouldn't come up in
 > normal use.
 
-**AI writing assist** (new): title/SEO-description/Twitter-thread generation, a
+**AI writing assist**: title/SEO-description/Twitter-thread generation, a
 live debounced writing-suggestions panel, tone analysis, and a readability
 score, all on the Create Post page. It runs fully today on a deterministic
 offline stub (no external API key needed) and upgrades to real
 [Gemini](https://aistudio.google.com/apikey) output the moment `GEMINI_API_KEY`
 is set — no code changes required either way.
+
+**Analytics dashboard** (new): live view/like/comment counters (real-time via
+Socket.io), a per-post views-over-time chart, trending posts (24h/7d/30d),
+author stats, and reader insights (device breakdown, top referrers, best-effort
+country). Runs entirely on MongoDB aggregation + an in-process cache — no Redis
+or paid analytics service required.
 
 ## 🏗 Architecture
 
@@ -39,12 +45,13 @@ The application is decomposed into independent services, each with its own datab
 * **Comment Service:** Manages comments on posts.
 * **Like Service:** Manages likes on posts.
 * **AI Service:** Generates title/SEO-description/Twitter-thread suggestions, live writing tips, tone analysis, and readability scoring — provider-agnostic (offline stub or Gemini).
+* **Analytics Service:** Ingests view/like/comment/signup/login events and serves dashboard, trending, and author-stats aggregations, with live updates over Socket.io.
 * **Ingress Controller:** NGINX handles routing between the frontend and backend services.
 
 ## 🛠 Tech Stack
 
-* **Frontend:** React, TypeScript, TailwindCSS, Vite
-* **Backend:** Node.js, Express, TypeScript
+* **Frontend:** React, TypeScript, TailwindCSS, Vite, Recharts, Socket.io-client
+* **Backend:** Node.js, Express, TypeScript, Socket.io
 * **Database:** MongoDB (Per-service database pattern)
 * **AI:** Google Gemini API, behind a swappable provider interface with a deterministic offline stub (works with zero external API keys)
 * **DevOps:** Docker, Kubernetes (Minikube/Docker Desktop), NGINX Ingress
@@ -93,6 +100,7 @@ graph TD
             Comm[<b>Comment Service</b><br>Port: 5002]:::backend
             Like[<b>Like Service</b><br>Port: 5003]:::backend
             AI[<b>AI Service</b><br>Port: 5004<br>Gemini or offline stub]:::backend
+            Analytics[<b>Analytics Service</b><br>Port: 5005<br>+ Socket.io]:::backend
         end
 
         subgraph Database_Layer [Persistent Storage]
@@ -102,6 +110,7 @@ graph TD
             CommDB[(Comment Mongo)]:::db
             LikeDB[(Like Mongo)]:::db
             AIDB[(AI Mongo)]:::db
+            AnalyticsDB[(Analytics Mongo)]:::db
         end
     end
 
@@ -115,6 +124,7 @@ graph TD
     Ingress -->|2. Path: /api/comments/*| Comm
     Ingress -->|2. Path: /api/likes/*| Like
     Ingress -->|2. Path: /api/ai/*| AI
+    Ingress -->|2. Path: /api/analytics/*| Analytics
 
     %% Database Connections - Dotted white lines
     Auth -.->|3. Connect| AuthDB
@@ -122,6 +132,7 @@ graph TD
     Comm -.->|3. Connect| CommDB
     Like -.->|3. Connect| LikeDB
     AI -.->|3. Connect| AIDB
+    Analytics -.->|3. Connect| AnalyticsDB
     
     %% Force Link Colors to White (Note: varying support in some viewers)
     linkStyle default stroke:#fff,stroke-width:2px;
@@ -184,6 +195,7 @@ kubectl apply -f k8s/backend-post.yml
 kubectl apply -f k8s/backend-comment.yml
 kubectl apply -f k8s/backend-like.yml
 kubectl apply -f k8s/backend-ai.yml
+kubectl apply -f k8s/backend-analytics.yml
 
 # 5. Deploy Frontend
 kubectl apply -f k8s/frontend.yml
@@ -228,6 +240,7 @@ Contains:
 * `COMMENT_MONGO_URI`
 * `LIKE_MONGO_URI`
 * `AI_MONGO_URI`
+* `ANALYTICS_MONGO_URI`
 * `GEMINI_MODEL` (defaults to `gemini-2.0-flash`)
 * Service URLs for internal cluster communication
 
@@ -237,6 +250,7 @@ Example:
 AUTH_MONGO_URI=mongodb://auth-mongo:27017/authService
 POST_MONGO_URI=mongodb://post-mongo:27017/postService
 AI_MONGO_URI=mongodb://ai-mongo:27017/aiService
+ANALYTICS_MONGO_URI=mongodb://analytics-mongo:27017/analyticsService
 ```
 
 ---
@@ -253,6 +267,7 @@ AI_MONGO_URI=mongodb://ai-mongo:27017/aiService
 | Comment Service | `/api/comments` | Manage comments     |
 | Like Service    | `/api/likes`    | Like / Unlike posts |
 | AI Service      | `/api/ai`       | Writing suggestions, title/description/Twitter generation, tone & readability |
+| Analytics Service | `/api/analytics` | View/like/comment/signup/login tracking, dashboard, trending, author stats |
 
 ### AI Service (`/api/ai`) — all routes require `Authorization: Bearer <jwt>`
 
@@ -270,6 +285,32 @@ Streamed responses carry `X-AI-Provider` (`stub` or `gemini`) and `X-AI-Cache`
 calculation — always accurate, no AI provider or API key involved. Every other
 endpoint runs on the offline stub provider unless `GEMINI_API_KEY` is set.
 
+### Analytics Service (`/api/analytics`) — all routes are public (no JWT required)
+
+Ingest is intentionally unauthenticated — none of it is sensitive data (no PII,
+no financial info), and signup-tracking necessarily happens before a token
+exists. The `/analytics` dashboard page itself is still gated behind the
+existing `ProtectedRoute` on the frontend.
+
+| Method & Path | Body / Query | Response |
+| --- | --- | --- |
+| `POST /api/analytics/track-view` | `{ postId, referrer? }` | logs a view; device parsed from `User-Agent`, country best-effort from `CF-IPCountry` |
+| `POST /api/analytics/track-read-time` | `{ postId, durationMs }` | sent via `navigator.sendBeacon` on page-leave |
+| `POST /api/analytics/track-like` | `{ postId }` | logs a like (fired alongside the existing like API call) |
+| `POST /api/analytics/track` | `{ type: "comment"\|"signup"\|"login", postId? }` | generic event log |
+| `GET /api/analytics/dashboard` | — | site-wide: today's views/likes/comments, 30-day device breakdown, top referrers, top countries |
+| `GET /api/analytics/dashboard?postId=X` | `postId` | that post's daily views for the last 14 days, total views, avg read time |
+| `GET /api/analytics/posts?postIds=a,b,c` | `postIds` (csv) | per-post `{views, likes, comments, engagementRate}` |
+| `GET /api/analytics/trending?period=24h\|7d\|30d` | `period` | top 10 posts by weighted score (`views + likes*3 + comments*5`) |
+| `GET /api/analytics/author-stats?postIds=a,b,c` | `postIds` (csv) | `{totalPosts, totalReach, avgEngagementRate}` |
+
+Every ingest call also broadcasts a `metrics:update` event over Socket.io, so
+an open `/analytics` dashboard ticks live. Query endpoints are cached
+in-process for 5 minutes (no Redis — the free tier runs one instance, so
+there's no cross-instance cache to keep consistent). Country detection depends
+on the hosting edge forwarding a `CF-IPCountry`-style header, which isn't
+guaranteed — it degrades to `"Unknown"` rather than silently faking data.
+
 ## Horizontal Pod Autoscaler (HPA) – Auto-scaling in action
 
 All backend microservices and the frontend are configured with **Horizontal Pod Autoscaling** based on CPU utilization.  
@@ -282,6 +323,7 @@ When traffic spikes, Kubernetes automatically scales the number of pods to maint
 | Comment Service     | 60%        | 1        | 10       | Scales during comment floods                  |
 | Like Service        | 60%        | 1        | 10       | Scales on viral posts                         |
 | AI Service          | 60%        | 1        | 10       | Scales under bursts of writing-assist calls   |
+| Analytics Service   | 60%        | 1        | 10       | Scales under view/like tracking bursts        |
 | Frontend (React)    | 50%        | 2        | 15       | Keeps UI responsive under heavy traffic       |
 
 ### How to see it live (30-second demo)

@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { motion } from 'framer-motion';
-import { FiLogIn, FiLogOut, FiPlusSquare, FiUserPlus } from 'react-icons/fi';
+import { FiLogIn, FiLogOut, FiPlusSquare, FiUserPlus, FiBarChart2 } from 'react-icons/fi';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -38,6 +38,12 @@ const Navbar = () => {
                   <Link to="/create-post" className="flex items-center space-x-2 text-slate-300 hover:text-indigo-400 transition-colors">
                     <FiPlusSquare />
                     <span>Create Post</span>
+                  </Link>
+                </motion.div>
+                <motion.div variants={navItemVariants}>
+                  <Link to="/analytics" className="flex items-center space-x-2 text-slate-300 hover:text-indigo-400 transition-colors">
+                    <FiBarChart2 />
+                    <span>Analytics</span>
                   </Link>
                 </motion.div>
                 <motion.div variants={navItemVariants}>

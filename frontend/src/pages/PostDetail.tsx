@@ -159,6 +159,7 @@ import { type Post, type Comment } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiHeart, FiMessageSquare, FiLogIn } from 'react-icons/fi'; // Added FiLogIn
+import { trackView, trackLike, trackComment, trackReadTime } from '../lib/analytics';
 
 const PostDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -171,6 +172,37 @@ const PostDetail = () => {
   const [hasLiked, setHasLiked] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Fires once per post visit, deliberately kept separate from the
+  // fetchData effect below (which also depends on `user` and would
+  // otherwise double-count a view when auth finishes loading).
+  useEffect(() => {
+    if (!id) return;
+    trackView(id);
+  }, [id]);
+
+  // Reports how long the post was actually open, via sendBeacon so it
+  // survives the tab closing (see lib/analytics.ts).
+  useEffect(() => {
+    if (!id) return;
+    const startedAt = Date.now();
+    let reported = false;
+    const report = () => {
+      if (reported) return; // one report per visit — avoid double-counting on tab-hide + unmount
+      reported = true;
+      trackReadTime(id, Date.now() - startedAt);
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') report();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pagehide', report);
+    return () => {
+      report();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pagehide', report);
+    };
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -210,6 +242,7 @@ const PostDetail = () => {
       } else {
         await likeApi.post('/', { postId: id });
         setLikeCount(prev => prev + 1);
+        trackLike(id);
       }
       setHasLiked(!hasLiked);
     } catch (error) {
@@ -224,6 +257,7 @@ const PostDetail = () => {
       const response = await commentApi.post('/', { postId: id, content: newComment });
       setComments(prev => [response.data, ...prev]);
       setNewComment('');
+      trackComment(id);
     } catch (error) {
       console.error("Failed to add comment:", error);
     }

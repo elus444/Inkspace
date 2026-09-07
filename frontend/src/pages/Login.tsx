@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { authApi } from '../api/axios';
 import { motion } from 'framer-motion';
 import { FiAlertTriangle } from 'react-icons/fi';
+import { trackLogin } from '../lib/analytics';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -18,6 +19,7 @@ const Login = () => {
     try {
       const response = await authApi.post('/login', { email, password });
       login(response.data.token);
+      trackLogin();
       navigate('/');
     } catch (err) {
       setError('Failed to login. Please check your credentials.');

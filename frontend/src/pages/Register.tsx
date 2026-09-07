@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/axios';
 import { motion } from 'framer-motion';
 import { FiAlertTriangle } from 'react-icons/fi';
+import { trackSignup } from '../lib/analytics';
 
 
 const Register = () => {
@@ -17,6 +18,7 @@ const Register = () => {
     setError('');
     try {
       await authApi.post('/register', { name, email, password });
+      trackSignup();
       navigate('/login');
     } catch (err) {
       setError('Failed to register. The email might already be in use.');

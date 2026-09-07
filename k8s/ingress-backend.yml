@@ -48,3 +48,10 @@ spec:
             name: ai-service
             port:
               number: 5004
+      - path: /api/analytics
+        pathType: Prefix
+        backend:
+          service:
+            name: analytics-service
+            port:
+              number: 5005

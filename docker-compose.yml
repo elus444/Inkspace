@@ -56,6 +56,17 @@ services:
     volumes:
       - ai-mongo-data:/data/db
 
+  analytics-mongo:
+    image: mongo:6
+    container_name: analytics-mongo
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: analyticsService
+    ports:
+      - "27022:27017"
+    volumes:
+      - analytics-mongo-data:/data/db
+
   auth-service:
     build: ./services/auth
     container_name: auth-service
@@ -122,6 +133,18 @@ services:
       - auth-service
     command: npm run dev
 
+  analytics-service:
+    build: ./services/analytics
+    container_name: analytics-service
+    restart: always
+    env_file:
+      - ./services/analytics/.env
+    ports:
+      - "5005:5005"
+    depends_on:
+      - analytics-mongo
+    command: npm run dev
+
   frontend:
     build: ./frontend
     container_name: inkspace-frontend
@@ -134,6 +157,7 @@ services:
       - comment-service
       - like-service
       - ai-service
+      - analytics-service
 
 
 volumes:
@@ -142,3 +166,4 @@ volumes:
   comment-mongo-data:
   like-mongo-data:
   ai-mongo-data:
+  analytics-mongo-data:

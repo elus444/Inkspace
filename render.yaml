@@ -85,6 +85,21 @@ services:
         value: gemini-2.0-flash
 
   - type: web
+    name: inkspace-analytics
+    env: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./services/analytics/Dockerfile
+    dockerContext: ./services/analytics
+    envVarGroups:
+      - inkspace-shared
+    envVars:
+      - key: PORT
+        value: 5005
+      - key: MONGO_URL
+        sync: false
+
+  - type: web
     name: inkspace-frontend
     env: static
     plan: free
@@ -101,6 +116,8 @@ services:
         value: https://inkspace-like.onrender.com/api/likes
       - key: VITE_AI_URL
         value: https://inkspace-ai.onrender.com/api/ai
+      - key: VITE_ANALYTICS_URL
+        value: https://inkspace-analytics.onrender.com/api/analytics
     routes:
       - type: rewrite
         source: /*
