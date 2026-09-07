@@ -9,6 +9,19 @@ A scalable, full-stack blogging platform built using a **Microservices Architect
 ![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
 ![MongoDB](https://img.shields.io/badge/MongoDB-%234ea94b.svg?style=for-the-badge&logo=mongodb&logoColor=white)
 
+## 🚀 Live Demo
+
+**[inkspace-frontend.onrender.com](https://inkspace-frontend.onrender.com)**
+
+Deployed free on Render (4 backend microservices + static frontend) with MongoDB
+Atlas — one database per service, per the architecture below. See
+[DEPLOY.md](./DEPLOY.md) for the full deployment guide.
+
+> Free-tier services spin down after ~15 min idle; a keep-alive workflow
+> ([`.github/workflows/keep-alive.yml`](./.github/workflows/keep-alive.yml))
+> pings all 5 services every 10 minutes so cold starts shouldn't come up in
+> normal use.
+
 ## 🏗 Architecture
 
 The application is decomposed into independent services, each with its own database to ensure loose coupling and independent scalability.
