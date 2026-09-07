@@ -23,8 +23,11 @@ data:
   POST_MONGO_URI: "mongodb://post-mongo:27017/postService"
   COMMENT_MONGO_URI: "mongodb://comment-mongo:27017/commentService"
   LIKE_MONGO_URI: "mongodb://like-mongo:27017/likeService"
-  
+  AI_MONGO_URI: "mongodb://ai-mongo:27017/aiService"
+
   AUTH_SERVICE_URL: "http://auth-service:5000"
   POST_SERVICE_URL: "http://post-service:5001"
   COMMENT_SERVICE_URL: "http://comment-service:5002"
   LIKE_SERVICE_URL: "http://like-service:5003"
+  AI_SERVICE_URL: "http://ai-service:5004"
+  GEMINI_MODEL: "gemini-2.0-flash"

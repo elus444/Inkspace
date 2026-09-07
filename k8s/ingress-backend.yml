@@ -41,3 +41,10 @@ spec:
             name: like-service
             port:
               number: 5003
+      - path: /api/ai
+        pathType: Prefix
+        backend:
+          service:
+            name: ai-service
+            port:
+              number: 5004

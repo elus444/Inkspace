@@ -13,14 +13,21 @@ A scalable, full-stack blogging platform built using a **Microservices Architect
 
 **[inkspace-frontend.onrender.com](https://inkspace-frontend.onrender.com)**
 
-Deployed free on Render (4 backend microservices + static frontend) with MongoDB
+Deployed free on Render (5 backend microservices + static frontend) with MongoDB
 Atlas — one database per service, per the architecture below. See
 [DEPLOY.md](./DEPLOY.md) for the full deployment guide.
 
 > Free-tier services spin down after ~15 min idle; a keep-alive workflow
 > ([`.github/workflows/keep-alive.yml`](./.github/workflows/keep-alive.yml))
-> pings all 5 services every 10 minutes so cold starts shouldn't come up in
+> pings all 6 services every 10 minutes so cold starts shouldn't come up in
 > normal use.
+
+**AI writing assist** (new): title/SEO-description/Twitter-thread generation, a
+live debounced writing-suggestions panel, tone analysis, and a readability
+score, all on the Create Post page. It runs fully today on a deterministic
+offline stub (no external API key needed) and upgrades to real
+[Gemini](https://aistudio.google.com/apikey) output the moment `GEMINI_API_KEY`
+is set — no code changes required either way.
 
 ## 🏗 Architecture
 
@@ -31,6 +38,7 @@ The application is decomposed into independent services, each with its own datab
 * **Post Service:** Handles CRUD operations for Blog Posts.
 * **Comment Service:** Manages comments on posts.
 * **Like Service:** Manages likes on posts.
+* **AI Service:** Generates title/SEO-description/Twitter-thread suggestions, live writing tips, tone analysis, and readability scoring — provider-agnostic (offline stub or Gemini).
 * **Ingress Controller:** NGINX handles routing between the frontend and backend services.
 
 ## 🛠 Tech Stack
@@ -38,6 +46,7 @@ The application is decomposed into independent services, each with its own datab
 * **Frontend:** React, TypeScript, TailwindCSS, Vite
 * **Backend:** Node.js, Express, TypeScript
 * **Database:** MongoDB (Per-service database pattern)
+* **AI:** Google Gemini API, behind a swappable provider interface with a deterministic offline stub (works with zero external API keys)
 * **DevOps:** Docker, Kubernetes (Minikube/Docker Desktop), NGINX Ingress
 * **Authentication:** JWT (JSON Web Tokens)
 
@@ -83,6 +92,7 @@ graph TD
             Post[<b>Post Service</b><br>Port: 5001]:::backend
             Comm[<b>Comment Service</b><br>Port: 5002]:::backend
             Like[<b>Like Service</b><br>Port: 5003]:::backend
+            AI[<b>AI Service</b><br>Port: 5004<br>Gemini or offline stub]:::backend
         end
 
         subgraph Database_Layer [Persistent Storage]
@@ -91,6 +101,7 @@ graph TD
             PostDB[(Post Mongo)]:::db
             CommDB[(Comment Mongo)]:::db
             LikeDB[(Like Mongo)]:::db
+            AIDB[(AI Mongo)]:::db
         end
     end
 
@@ -103,12 +114,14 @@ graph TD
     Ingress -->|2. Path: /api/posts/*| Post
     Ingress -->|2. Path: /api/comments/*| Comm
     Ingress -->|2. Path: /api/likes/*| Like
+    Ingress -->|2. Path: /api/ai/*| AI
 
     %% Database Connections - Dotted white lines
     Auth -.->|3. Connect| AuthDB
     Post -.->|3. Connect| PostDB
     Comm -.->|3. Connect| CommDB
     Like -.->|3. Connect| LikeDB
+    AI -.->|3. Connect| AIDB
     
     %% Force Link Colors to White (Note: varying support in some viewers)
     linkStyle default stroke:#fff,stroke-width:2px;
@@ -170,6 +183,7 @@ kubectl apply -f k8s/backend-auth.yml
 kubectl apply -f k8s/backend-post.yml
 kubectl apply -f k8s/backend-comment.yml
 kubectl apply -f k8s/backend-like.yml
+kubectl apply -f k8s/backend-ai.yml
 
 # 5. Deploy Frontend
 kubectl apply -f k8s/frontend.yml
@@ -202,6 +216,7 @@ All values must be **Base64 encoded**.
 MONGO_ROOT_USERNAME
 MONGO_ROOT_PASSWORD
 JWT_SECRET
+GEMINI_API_KEY   # optional — blank/empty runs the AI service on its offline stub
 ```
 
 ### ConfigMap (`configMap.yml`)
@@ -212,6 +227,8 @@ Contains:
 * `POST_MONGO_URI`
 * `COMMENT_MONGO_URI`
 * `LIKE_MONGO_URI`
+* `AI_MONGO_URI`
+* `GEMINI_MODEL` (defaults to `gemini-2.0-flash`)
 * Service URLs for internal cluster communication
 
 Example:
@@ -219,6 +236,7 @@ Example:
 ```
 AUTH_MONGO_URI=mongodb://auth-mongo:27017/authService
 POST_MONGO_URI=mongodb://post-mongo:27017/postService
+AI_MONGO_URI=mongodb://ai-mongo:27017/aiService
 ```
 
 ---
@@ -234,6 +252,23 @@ POST_MONGO_URI=mongodb://post-mongo:27017/postService
 | Post Service    | `/api/posts`    | CRUD on posts       |
 | Comment Service | `/api/comments` | Manage comments     |
 | Like Service    | `/api/likes`    | Like / Unlike posts |
+| AI Service      | `/api/ai`       | Writing suggestions, title/description/Twitter generation, tone & readability |
+
+### AI Service (`/api/ai`) — all routes require `Authorization: Bearer <jwt>`
+
+| Method & Path                  | Body                        | Response                                              |
+| ------------------------------- | ---------------------------- | ------------------------------------------------------ |
+| `POST /api/ai/suggest-title`        | `{ content }`                | `text/plain` streamed title                            |
+| `POST /api/ai/suggest-description`  | `{ content, title? }`        | `text/plain` streamed SEO description                  |
+| `POST /api/ai/suggest-twitter`      | `{ content }`                 | `text/plain` streamed numbered thread (`1/n`, `2/n`, …) |
+| `POST /api/ai/writing-suggestions`  | `{ content }`                 | `text/plain` streamed bullet-point tips                |
+| `POST /api/ai/analyze-tone`         | `{ content }`                 | `{ tone, confidence, provider }`                        |
+| `POST /api/ai/readability-score`    | `{ content }`                 | `{ fleschScore, gradeLevel, wordCount, sentenceCount, avgWordsPerSentence, tips[] }` |
+
+Streamed responses carry `X-AI-Provider` (`stub` or `gemini`) and `X-AI-Cache`
+(`HIT`/`MISS`) response headers. `readability-score` is a pure Flesch-Kincaid
+calculation — always accurate, no AI provider or API key involved. Every other
+endpoint runs on the offline stub provider unless `GEMINI_API_KEY` is set.
 
 ## Horizontal Pod Autoscaler (HPA) – Auto-scaling in action
 
@@ -246,6 +281,7 @@ When traffic spikes, Kubernetes automatically scales the number of pods to maint
 | Post Service        | 60%        | 1        | 10       | Went from 1 → 10 pods                         |
 | Comment Service     | 60%        | 1        | 10       | Scales during comment floods                  |
 | Like Service        | 60%        | 1        | 10       | Scales on viral posts                         |
+| AI Service          | 60%        | 1        | 10       | Scales under bursts of writing-assist calls   |
 | Frontend (React)    | 50%        | 2        | 15       | Keeps UI responsive under heavy traffic       |
 
 ### How to see it live (30-second demo)

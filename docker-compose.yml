@@ -45,6 +45,17 @@ services:
     volumes:
       - like-mongo-data:/data/db
 
+  ai-mongo:
+    image: mongo:6
+    container_name: ai-mongo
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: aiService
+    ports:
+      - "27021:27017"
+    volumes:
+      - ai-mongo-data:/data/db
+
   auth-service:
     build: ./services/auth
     container_name: auth-service
@@ -98,6 +109,19 @@ services:
       - post-service
     command: npm run dev
 
+  ai-service:
+    build: ./services/ai
+    container_name: ai-service
+    restart: always
+    env_file:
+      - ./services/ai/.env
+    ports:
+      - "5004:5004"
+    depends_on:
+      - ai-mongo
+      - auth-service
+    command: npm run dev
+
   frontend:
     build: ./frontend
     container_name: inkspace-frontend
@@ -109,6 +133,7 @@ services:
       - post-service
       - comment-service
       - like-service
+      - ai-service
 
 
 volumes:
@@ -116,3 +141,4 @@ volumes:
   post-mongo-data:
   comment-mongo-data:
   like-mongo-data:
+  ai-mongo-data:

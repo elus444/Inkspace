@@ -19,6 +19,7 @@ jobs:
             "https://inkspace-post.onrender.com/"
             "https://inkspace-comment.onrender.com/"
             "https://inkspace-like.onrender.com/"
+            "https://inkspace-ai.onrender.com/health"
             "https://inkspace-frontend.onrender.com/"
           )
           for url in "${urls[@]}"; do

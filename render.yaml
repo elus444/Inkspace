@@ -66,6 +66,25 @@ services:
         sync: false
 
   - type: web
+    name: inkspace-ai
+    env: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./services/ai/Dockerfile
+    dockerContext: ./services/ai
+    envVarGroups:
+      - inkspace-shared
+    envVars:
+      - key: PORT
+        value: 5004
+      - key: MONGO_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+
+  - type: web
     name: inkspace-frontend
     env: static
     plan: free
@@ -80,6 +99,8 @@ services:
         value: https://inkspace-comment.onrender.com/api/comments
       - key: VITE_LIKE_URL
         value: https://inkspace-like.onrender.com/api/likes
+      - key: VITE_AI_URL
+        value: https://inkspace-ai.onrender.com/api/ai
     routes:
       - type: rewrite
         source: /*
