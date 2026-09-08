@@ -11,6 +11,23 @@ const createApiClient = (baseURL: string) => {
     return config;
   });
 
+  // A 401 on a request that carried our own token means that token is no
+  // longer valid (expired, or the account was removed) -- previously
+  // nothing anywhere handled this, so an expired-session user just saw
+  // silently-failing requests indefinitely with no prompt to log back in.
+  // Only fires for requests that actually sent a token, so a wrong-password
+  // 401 from /login itself doesn't trigger a spurious "session expired".
+  api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      const sentAuthHeader = Boolean(error.config?.headers?.Authorization);
+      if (error.response?.status === 401 && sentAuthHeader) {
+        window.dispatchEvent(new Event('auth:unauthorized'));
+      }
+      return Promise.reject(error);
+    }
+  );
+
   return api;
 };
 

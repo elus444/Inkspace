@@ -9,11 +9,18 @@ export const createPost = async (req: AuthRequest, res: Response) => {
   try {
     const authorId = req.userId;
     if (!authorId) return res.status(401).json({ message: "Unauthorized" });
-    const { title, content, tags } = req.body;
-    const post = await Post.create({ title, content, authorId, tags });
+
+    const { title, content, tags } = req.body ?? {};
+    if (typeof title !== "string" || !title.trim() || typeof content !== "string" || !content.trim()) {
+      return res.status(400).json({ message: "title and content are required" });
+    }
+    const cleanTags = Array.isArray(tags) ? tags.filter((t) => typeof t === "string") : undefined;
+
+    const post = await Post.create({ title, content, authorId, tags: cleanTags });
     res.status(201).json(post);
   } catch (error) {
-    res.status(500).json({ message: "Failed to create post", error });
+    console.error("Failed to create post:", error);
+    res.status(500).json({ message: "Failed to create post" });
   }
 };
 
@@ -56,7 +63,8 @@ export const getPosts = async (req: Request, res: Response) => {
     ]);
     res.json({ posts, total, hasMore: skip + posts.length < total });
   } catch (error) {
-    res.status(500).json({ message: "Failed to fetch posts", error });
+    console.error("Failed to fetch posts:", error);
+    res.status(500).json({ message: "Failed to fetch posts" });
   }
 };
 
@@ -66,26 +74,59 @@ export const getPostById = async (req: Request, res: Response) => {
     if (!post) return res.status(404).json({ message: "Post not found" });
     res.json(post);
   } catch (error) {
-    res.status(500).json({ message: "Failed to fetch post", error });
+    console.error("Failed to fetch post:", error);
+    res.status(500).json({ message: "Failed to fetch post" });
   }
 };
 
-export const updatePost = async (req: Request, res: Response) => {
+export const updatePost = async (req: AuthRequest, res: Response) => {
   try {
-    const post = await Post.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
+    if (post.authorId !== req.userId) {
+      return res.status(403).json({ message: "You can only edit your own posts" });
+    }
+
+    // Whitelist exactly the fields a client may change -- never pass
+    // req.body straight into an update. Mongoose treats top-level `$`-keys
+    // in an update document as raw operators, so forwarding an unfiltered
+    // body would let a caller reassign authorId or run arbitrary $unset/
+    // $rename operators against a document they're allowed to touch at all.
+    const { title, content, tags } = req.body ?? {};
+    if (title !== undefined && (typeof title !== "string" || !title.trim())) {
+      return res.status(400).json({ message: "title must be a non-empty string" });
+    }
+    if (content !== undefined && (typeof content !== "string" || !content.trim())) {
+      return res.status(400).json({ message: "content must be a non-empty string" });
+    }
+    if (title !== undefined) post.title = title;
+    if (content !== undefined) post.content = content;
+    if (tags !== undefined) post.tags = Array.isArray(tags) ? tags.filter((t) => typeof t === "string") : [];
+
+    await post.save();
     res.json(post);
   } catch (error) {
-    res.status(500).json({ message: "Failed to update post", error });
+    console.error("Failed to update post:", error);
+    res.status(500).json({ message: "Failed to update post" });
   }
 };
 
-export const deletePost = async (req: Request, res: Response) => {
+export const deletePost = async (req: AuthRequest, res: Response) => {
   try {
-    const post = await Post.findByIdAndDelete(req.params.id);
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ message: "Post not found" });
+    if (post.authorId !== req.userId) {
+      return res.status(403).json({ message: "You can only delete your own posts" });
+    }
+
+    await post.deleteOne();
     res.json({ message: "Post deleted" });
   } catch (error) {
-    res.status(500).json({ message: "Failed to delete post", error });
+    console.error("Failed to delete post:", error);
+    res.status(500).json({ message: "Failed to delete post" });
   }
 };
