@@ -20,7 +20,14 @@ interface FeedItem {
   key: string;
   timestamp: string;
   post: Post;
-  repostedBy?: string; // reposter's display name, if this item is a repost
+  repostedBy?: string[]; // display names of everyone who reposted this post into view
+}
+
+/** Renders "Reposted by A", "Reposted by A and B", or "Reposted by A and 2 others". */
+function formatReposters(names: string[]): string {
+  if (names.length === 1) return `Reposted by ${names[0]}`;
+  if (names.length === 2) return `Reposted by ${names[0]} and ${names[1]}`;
+  return `Reposted by ${names[0]} and ${names.length - 1} others`;
 }
 
 /** Batch-resolves userIds -> display names, tolerating the endpoint being
@@ -39,22 +46,39 @@ async function resolveNames(ids: string[]): Promise<Map<string, string>> {
   }
 }
 
+/**
+ * One card per underlying post, always -- previously a post that was both
+ * in the current page of regular posts AND reposted by someone showed up
+ * as two separate cards with identical content, and a post reposted by
+ * several people showed up once per repost. Keying everything by postId
+ * folds all of that into a single card, with every reposter's name
+ * attached and the card's sort position bumped to the most recent action.
+ */
 function buildFeed(posts: Post[], reposts: RepostRecord[], postById: Map<string, Post>, nameById: Map<string, string>): FeedItem[] {
-  const items: FeedItem[] = [];
+  const itemByPostId = new Map<string, FeedItem>();
   for (const post of posts) {
-    items.push({ key: `post:${post._id}`, timestamp: post.createdAt, post });
+    itemByPostId.set(post._id, { key: `post:${post._id}`, timestamp: post.createdAt, post });
   }
   for (const repost of reposts) {
     const post = postById.get(repost.postId);
     if (!post) continue; // original post may have been deleted since
-    items.push({
-      key: `repost:${repost._id}`,
-      timestamp: repost.createdAt,
-      post,
-      repostedBy: nameById.get(repost.userId) ?? 'Someone',
-    });
+    const reposterName = nameById.get(repost.userId) ?? 'Someone';
+    const existing = itemByPostId.get(repost.postId);
+    if (existing) {
+      existing.repostedBy = [...(existing.repostedBy ?? []), reposterName];
+      if (new Date(repost.createdAt) > new Date(existing.timestamp)) {
+        existing.timestamp = repost.createdAt;
+      }
+    } else {
+      itemByPostId.set(repost.postId, {
+        key: `post:${repost.postId}`,
+        timestamp: repost.createdAt,
+        post,
+        repostedBy: [reposterName],
+      });
+    }
   }
-  return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return [...itemByPostId.values()].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
 const Home = () => {
@@ -263,7 +287,7 @@ const Home = () => {
                 >
                   {item.repostedBy && (
                     <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-taupe">
-                      <FiRepeat size={12} /> Reposted by {item.repostedBy}
+                      <FiRepeat size={12} /> {formatReposters(item.repostedBy)}
                     </p>
                   )}
                   <Link to={`/post/${item.post._id}`} className="group block h-full">

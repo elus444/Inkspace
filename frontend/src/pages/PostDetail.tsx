@@ -158,7 +158,7 @@ import { postApi, commentApi, likeApi, saveApi, repostApi } from '../api/axios';
 import { type Post, type Comment } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiHeart, FiMessageSquare, FiLogIn, FiBookmark, FiRepeat } from 'react-icons/fi'; // Added FiLogIn
+import { FiHeart, FiMessageSquare, FiLogIn, FiBookmark, FiRepeat, FiTrash2 } from 'react-icons/fi'; // Added FiLogIn
 import { trackView, trackLike, trackComment, trackSave, trackRepost, trackReadTime } from '../lib/analytics';
 
 const PostDetail = () => {
@@ -175,6 +175,7 @@ const PostDetail = () => {
   const [repostCount, setRepostCount] = useState(0);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   // Fires once per post visit, deliberately kept separate from the
   // fetchData effect below (which also depends on `user` and would
@@ -299,6 +300,19 @@ const PostDetail = () => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!id) return;
+    if (!window.confirm('Delete this post? This cannot be undone.')) return;
+    setDeleting(true);
+    try {
+      await postApi.delete(`/${id}`);
+      navigate('/');
+    } catch (error) {
+      console.error('Failed to delete post:', error);
+      setDeleting(false);
+    }
+  };
+
   const handleCommentSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !id) return;
@@ -341,7 +355,7 @@ const PostDetail = () => {
         {post.content}
       </div>
 
-      <div className="my-8 flex items-center gap-6 border-y border-border-warm py-4">
+      <div className="my-8 flex flex-wrap items-center gap-4 border-y border-border-warm py-4 sm:gap-6">
         <motion.button
           onClick={handleLike}
           className="group flex items-center gap-2 transition-colors duration-300"
@@ -383,6 +397,17 @@ const PostDetail = () => {
             }`}
           />
         </motion.button>
+        {user && post.authorId === user.id && (
+          <motion.button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="group flex items-center gap-2 text-taupe transition-colors duration-300 hover:text-red-700 disabled:opacity-50"
+            whileTap={{ scale: 1.15 }}
+            title="Delete post"
+          >
+            <FiTrash2 className="h-5 w-5" />
+          </motion.button>
+        )}
       </div>
 
       <div>

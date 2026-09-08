@@ -35,7 +35,7 @@ const Login = () => {
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: easeEditorial }}
-        className="rounded-2xl border border-border-warm bg-cream p-10 shadow-warm"
+        className="rounded-2xl border border-border-warm bg-cream p-6 shadow-warm sm:p-10"
       >
         <div className="mb-8 text-center">
           <motion.div

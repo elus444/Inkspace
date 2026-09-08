@@ -35,38 +35,45 @@ const Navbar = () => {
           </Link>
 
           <motion.div
-            className="flex items-center gap-2 sm:gap-3"
+            className="flex items-center gap-1 sm:gap-3"
             initial="hidden"
             animate="visible"
             variants={{ visible: { transition: { staggerChildren: 0.08, delayChildren: 0.15 } } }}
           >
             {user ? (
               <>
+                {/* Icon-only below `sm` so these stay reachable on phones --
+                    previously `hidden sm:flex` hid Create Post, Analytics,
+                    and Library entirely on small screens with no other way
+                    to reach them. */}
                 <motion.div variants={navItemVariants}>
                   <Link
                     to="/create-post"
-                    className="link-underline hidden items-center gap-2 px-2 py-2 text-sm font-medium text-ink-soft transition-colors hover:text-maroon sm:flex"
+                    title="Create Post"
+                    className="link-underline flex items-center gap-2 rounded-full p-2.5 text-sm font-medium text-ink-soft transition-colors hover:text-maroon sm:px-2 sm:py-2"
                   >
-                    <FiPlusSquare size={16} />
-                    <span>Create Post</span>
+                    <FiPlusSquare size={18} />
+                    <span className="hidden sm:inline">Create Post</span>
                   </Link>
                 </motion.div>
                 <motion.div variants={navItemVariants}>
                   <Link
                     to="/analytics"
-                    className="link-underline hidden items-center gap-2 px-2 py-2 text-sm font-medium text-ink-soft transition-colors hover:text-maroon sm:flex"
+                    title="Analytics"
+                    className="link-underline flex items-center gap-2 rounded-full p-2.5 text-sm font-medium text-ink-soft transition-colors hover:text-maroon sm:px-2 sm:py-2"
                   >
-                    <FiBarChart2 size={16} />
-                    <span>Analytics</span>
+                    <FiBarChart2 size={18} />
+                    <span className="hidden sm:inline">Analytics</span>
                   </Link>
                 </motion.div>
                 <motion.div variants={navItemVariants}>
                   <Link
                     to="/library"
-                    className="link-underline hidden items-center gap-2 px-2 py-2 text-sm font-medium text-ink-soft transition-colors hover:text-maroon sm:flex"
+                    title="Library"
+                    className="link-underline flex items-center gap-2 rounded-full p-2.5 text-sm font-medium text-ink-soft transition-colors hover:text-maroon sm:px-2 sm:py-2"
                   >
-                    <FiBookmark size={16} />
-                    <span>Library</span>
+                    <FiBookmark size={18} />
+                    <span className="hidden sm:inline">Library</span>
                   </Link>
                 </motion.div>
                 <motion.div variants={navItemVariants}>
@@ -74,10 +81,11 @@ const Navbar = () => {
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
                     onClick={handleLogout}
-                    className="flex items-center gap-2 rounded-full border border-border-warm bg-parchment px-4 py-2 text-sm font-medium text-ink-soft transition-colors hover:border-maroon/40 hover:bg-maroon hover:text-cream"
+                    title="Logout"
+                    className="flex items-center gap-2 rounded-full border border-border-warm bg-parchment p-2.5 text-sm font-medium text-ink-soft transition-colors hover:border-maroon/40 hover:bg-maroon hover:text-cream sm:px-4 sm:py-2"
                   >
                     <FiLogOut size={15} />
-                    <span>Logout</span>
+                    <span className="hidden sm:inline">Logout</span>
                   </motion.button>
                 </motion.div>
               </>

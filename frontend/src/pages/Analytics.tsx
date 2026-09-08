@@ -205,7 +205,7 @@ const Analytics = () => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-3 gap-4 rounded-2xl border border-border-warm bg-cream p-5 text-center shadow-warm-sm"
+          className="grid grid-cols-1 gap-4 rounded-2xl border border-border-warm bg-cream p-5 text-center shadow-warm-sm sm:grid-cols-3"
         >
           <div>
             <p className="font-display text-2xl italic text-ink">{authorStats.totalPosts}</p>
