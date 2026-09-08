@@ -11,16 +11,23 @@ const CreatePost = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    // Without this guard, a slow request (or an impatient double-click/tap)
+    // let the button fire twice before the first response came back,
+    // publishing the same post as two separate documents.
+    if (submitting) return;
+    setSubmitting(true);
     try {
       await postApi.post('/', { title, content });
       navigate('/');
     } catch (err) {
       setError('Failed to create post.');
       console.error(err);
+      setSubmitting(false);
     }
   };
 
@@ -75,9 +82,10 @@ const CreatePost = () => {
             whileHover={{ scale: 1.015, boxShadow: '0 14px 34px -14px rgba(122,46,61,0.55)' }}
             whileTap={{ scale: 0.98 }}
             type="submit"
-            className="w-full rounded-full bg-maroon py-3 text-sm font-medium text-cream shadow-warm-sm transition-colors sm:w-auto sm:px-10"
+            disabled={submitting}
+            className="w-full rounded-full bg-maroon py-3 text-sm font-medium text-cream shadow-warm-sm transition-colors disabled:opacity-60 sm:w-auto sm:px-10"
           >
-            Publish story
+            {submitting ? 'Publishing...' : 'Publish story'}
           </motion.button>
         </form>
       </motion.div>

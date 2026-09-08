@@ -176,6 +176,7 @@ const PostDetail = () => {
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [postingComment, setPostingComment] = useState(false);
 
   // Fires once per post visit, deliberately kept separate from the
   // fetchData effect below (which also depends on `user` and would
@@ -315,7 +316,11 @@ const PostDetail = () => {
 
   const handleCommentSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim() || !id) return;
+    // Same double-submit guard as CreatePost -- a slow request plus an
+    // impatient second click on "Post comment" would otherwise post the
+    // same comment twice.
+    if (!newComment.trim() || !id || postingComment) return;
+    setPostingComment(true);
     try {
       const response = await commentApi.post('/', { postId: id, content: newComment });
       setComments(prev => [response.data, ...prev]);
@@ -323,6 +328,8 @@ const PostDetail = () => {
       trackComment(id);
     } catch (error) {
       console.error("Failed to add comment:", error);
+    } finally {
+      setPostingComment(false);
     }
   };
 
@@ -426,9 +433,10 @@ const PostDetail = () => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              className="mt-3 rounded-full bg-maroon px-6 py-2 text-sm font-medium text-cream shadow-warm-sm transition-colors"
+              disabled={postingComment}
+              className="mt-3 rounded-full bg-maroon px-6 py-2 text-sm font-medium text-cream shadow-warm-sm transition-colors disabled:opacity-60"
             >
-              Post comment
+              {postingComment ? 'Posting...' : 'Post comment'}
             </motion.button>
           </form>
         ) : (
